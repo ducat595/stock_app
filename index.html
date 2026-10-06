@@ -1295,6 +1295,17 @@ fieldset{color:#334155;}
           <li>現在値をクリックすると株価チャートが新しいタブで開きます。</li>
           <li>ランキングには取得した市場データの更新時刻が表示されます。リアルタイム配信ではなく、遅延する場合があります。</li>
         </ul>
+        <h3>株主優待データの年度更新（管理者向け）</h3>
+        <p>株主優待データは、年1回または必要な時にPC上の「EDINET 株主優待JSON生成ツール」で作成し、GitHubのstock_appリポジトリにある <code>shareholder_benefits.json</code> を手動で置き換えて更新します。公開アプリからEDINET APIを直接呼び出す方式ではありません。</p>
+        <ol>
+          <li><code>benefits_generator_app.py</code> と <code>start_benefits_generator.bat</code> を同じフォルダーに置きます。</li>
+          <li>Windowsで <code>start_benefits_generator.bat</code> をダブルクリックします。ブラウザーでローカル生成画面が開きます。</li>
+          <li>対象年度とEDINET APIキーを入力して「生成開始」を押します。APIキーは生成ツールのファイルには保存されません。</li>
+          <li>処理完了後、<code>generated_benefits</code> フォルダーに年度別JSON、最新版用 <code>shareholder_benefits.json</code>、要レビューJSON、処理レポートJSONが作成されます。</li>
+          <li>要レビューJSONと処理レポートを確認し、公開候補について企業公式IRで制度継続・権利確定日・必要株数・優待内容を確認します。</li>
+          <li>確認後の <code>shareholder_benefits.json</code> をGitHubの <code>stock_app/shareholder_benefits.json</code> と手動で置き換えてコミットします。GitHub Pages反映後、株主優待検索で内容を確認します。</li>
+        </ol>
+        <p class="muted">注意：EDINETの有価証券報告書には株主優待専用の統一項目がないため、生成ツールは本文から候補を抽出します。「記載が見つからない＝優待なし」とは判定しません。公開前の公式IR確認を必須としてください。また、処理中はPCをスリープさせず、生成画面を閉じないでください。</p>
         <h3>7. 各表の列とリンクについて</h3>
         <p class="muted">一括チェック、AIおすすめ銘柄、値上がり・値下がりなどの表に表示される主な列の意味です。取得できない項目は「—」で表示されます。</p>
         <div style="overflow-x:auto;">
@@ -1722,56 +1733,146 @@ function addBenefitFavorite(code, name) {
     }
   });
 }
-async function loadBenefitList() {
-  const month = Number(document.getElementById("benefitMonth").value);
-  const status = document.getElementById("benefitStatus");
-  const box = document.getElementById("benefitTable");
-  status.textContent = `${month}月の株主優待データを読み込んでいます…`;
-  box.innerHTML = "";
-  try {
-    const response = await fetch(`${BENEFITS_DATA_URL}?v=${Date.now()}`, {cache:"no-store"});
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const raw = await response.json();
-    const dataDate = document.getElementById("benefitDataDate");
-    const updatedAt = Array.isArray(raw) ? null : raw.updatedAt;
-    if (dataDate) {
-      dataDate.innerHTML = `<b>情報取得日：</b>${updatedAt ? escapeHtml(String(updatedAt).replace(/-/g, "/")) : "—"}`;
-    }
-    const all = Array.isArray(raw) ? raw : (raw.items || raw.benefits || []);
-    const rows = all.filter(x => Number(x.month ?? x.recordMonth) === month)
-      .sort((a,b) => benefitDateSortValue(a.recordDate) - benefitDateSortValue(b.recordDate));
-    if (!rows.length) { status.textContent=`${month}月の登録済み優待データはありません。`; return; }
+let benefitDataCache = null;
+let benefitDataUpdatedAt = null;
+let benefitLoadToken = 0;
 
-    status.textContent=`${month}月：${rows.length}件。現在株価を取得しています…`;
-    const enriched = await Promise.all(rows.map(async x => {
-      try { const q=await fetchQuote(String(x.code)); return {...x,currentPrice:q?.price ?? null}; }
-      catch(e) { return {...x,currentPrice:null}; }
-    }));
-    const favCodes=new Set(loadFavs().map(x=>String(x.code).replace(/\.T$/i,"").toUpperCase()));
-    box.innerHTML=`<div class="benefit-table-wrap"><table class="benefit-table"><thead><tr>
-      <th>優待権利確定日</th><th>会社コード</th><th>日本語会社名</th><th>現在株価</th>
-      <th>業種</th><th>優待権利条件</th><th>優待内容</th><th>優待状況</th><th>情報元</th><th>お気に入り</th>
-      </tr></thead><tbody>${enriched.map(x=>{
-        const code=String(x.code).replace(/\.T$/i,"");
-        const name=x.name || jpName(code) || code;
-        const price=x.currentPrice==null ? "—" : `${Number(x.currentPrice).toLocaleString("ja-JP")}円`;
-        const already=favCodes.has(code.toUpperCase());
-        return `<tr>
-          <td data-label="優待権利確定日">${escapeHtml(String(x.recordDate||"—"))}</td><td data-label="会社コード">${escapeHtml(code)}</td>
-          <td data-label="日本語会社名"><a href="${benefitShikihoUrl(code)}" target="_blank" rel="noopener">${escapeHtml(name)}</a></td>
-          <td data-label="現在株価">${x.currentPrice==null ? "—" : `<a href="${benefitChartUrl(code)}" target="_blank" rel="noopener">${price}</a>`}</td>
-          <td data-label="業種">${escapeHtml(String(x.industry||"—"))}</td>
-          <td data-label="優待権利条件">${escapeHtml(String(x.conditions||x.condition||"—"))}</td>
-          <td data-label="優待内容">${escapeHtml(String(x.benefit||x.benefitContent||"—"))}</td>
-          <td data-label="優待状況">${escapeHtml(String(x.status||"要確認"))}</td>
-          <td data-label="情報元">${x.officialSource ? `<a href="${escapeHtml(String(x.officialSource))}" target="_blank" rel="noopener">公式情報</a>` : escapeHtml(String(x.sourceType||"要確認"))}</td>
-          <td data-label="お気に入り"><button class="btn btn-secondary btn-sm" data-benefit-fav-code="${escapeHtml(code)}" ${already?"disabled":""} onclick='addBenefitFavorite(${JSON.stringify(code)},${JSON.stringify(name)})'>${already?"登録済み":"お気に入り追加"}</button></td>
-        </tr>`;
-      }).join("")}</tbody></table></div>`;
-    status.textContent=`${month}月：${enriched.length}件を権利確定日順に表示しています。`;
+async function getBenefitData() {
+  if (benefitDataCache) return benefitDataCache;
+  const response = await fetch(`${BENEFITS_DATA_URL}?v=${Date.now()}`, {cache:"no-store"});
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const raw = await response.json();
+  benefitDataUpdatedAt = Array.isArray(raw) ? null : (raw.updatedAt || raw.generatedAt || null);
+  const source = Array.isArray(raw) ? raw : (raw.items || raw.benefits || []);
+  if (!Array.isArray(source)) throw new Error("株主優待JSONのitems配列を確認できません");
+
+  // 新旧JSONの両方を受け入れる。無効レコードだけ除外し、"要確認" は有効な表示値として保持する。
+  benefitDataCache = source.map((x, index) => {
+    const code = String(x?.code ?? x?.stockCode ?? "").replace(/\.T$/i,"").trim();
+    const monthRaw = x?.month ?? x?.recordMonth ?? null;
+    const month = Number(monthRaw);
+    return {
+      ...x,
+      _index:index,
+      code,
+      month:Number.isFinite(month) && month >= 1 && month <= 12 ? month : null,
+      name:x?.name ?? x?.companyName ?? "",
+      industry:x?.industry ?? "要確認",
+      recordDate:x?.recordDate ?? x?.rightsDate ?? "要確認",
+      conditions:x?.conditions ?? x?.condition ?? "要確認",
+      benefit:x?.benefit ?? x?.benefitContent ?? "要確認",
+      status:x?.status ?? "要確認",
+      officialSource:x?.officialSource ?? "",
+      sourceType:x?.sourceType ?? x?.source ?? "要確認"
+    };
+  }).filter(x => x.code);
+  return benefitDataCache;
+}
+
+function renderBenefitRows(rows, priceMap, token) {
+  if (token !== benefitLoadToken) return;
+  const box = document.getElementById("benefitTable");
+  const favCodes=new Set(loadFavs().map(x=>String(x.code).replace(/\.T$/i,"").toUpperCase()));
+  box.innerHTML=`<div class="benefit-table-wrap"><table class="benefit-table"><thead><tr>
+    <th>優待権利確定日</th><th>会社コード</th><th>日本語会社名</th><th>現在株価</th>
+    <th>業種</th><th>優待権利条件</th><th>優待内容</th><th>優待状況</th><th>情報元</th><th>お気に入り</th>
+    </tr></thead><tbody>${rows.map(x=>{
+      const code=String(x.code).replace(/\.T$/i,"");
+      const name=x.name || jpName(code) || code;
+      const currentPrice=priceMap.get(code);
+      const price=currentPrice==null ? "取得中…" : `${Number(currentPrice).toLocaleString("ja-JP")}円`;
+      const already=favCodes.has(code.toUpperCase());
+      const sourceHtml=x.officialSource
+        ? `<a href="${escapeHtml(String(x.officialSource))}" target="_blank" rel="noopener">公式情報</a>`
+        : escapeHtml(String(x.sourceType||"要確認"));
+      return `<tr>
+        <td data-label="優待権利確定日">${escapeHtml(String(x.recordDate||"要確認"))}</td>
+        <td data-label="会社コード">${escapeHtml(code)}</td>
+        <td data-label="日本語会社名"><a href="${benefitShikihoUrl(code)}" target="_blank" rel="noopener">${escapeHtml(name)}</a></td>
+        <td data-label="現在株価" data-benefit-price-code="${escapeHtml(code)}">${currentPrice==null ? price : `<a href="${benefitChartUrl(code)}" target="_blank" rel="noopener">${price}</a>`}</td>
+        <td data-label="業種">${escapeHtml(String(x.industry||"要確認"))}</td>
+        <td data-label="優待権利条件">${escapeHtml(String(x.conditions||"要確認"))}</td>
+        <td data-label="優待内容">${escapeHtml(String(x.benefit||"要確認"))}</td>
+        <td data-label="優待状況">${escapeHtml(String(x.status||"要確認"))}</td>
+        <td data-label="情報元">${sourceHtml}</td>
+        <td data-label="お気に入り"><button class="btn btn-secondary btn-sm" data-benefit-fav-code="${escapeHtml(code)}" ${already?"disabled":""} onclick='addBenefitFavorite(${JSON.stringify(code)},${JSON.stringify(name)})'>${already?"登録済み":"お気に入り追加"}</button></td>
+      </tr>`;
+    }).join("")}</tbody></table></div>`;
+}
+
+function updateBenefitPriceCell(code, price, token) {
+  if (token !== benefitLoadToken) return;
+  const cell=document.querySelector(`#benefitTable [data-benefit-price-code="${CSS.escape(String(code))}"]`);
+  if (!cell) return;
+  cell.innerHTML=price==null ? "—" : `<a href="${benefitChartUrl(code)}" target="_blank" rel="noopener">${Number(price).toLocaleString("ja-JP")}円</a>`;
+}
+
+async function loadBenefitPricesProgressively(rows, token) {
+  // 2,138件対応: 一斉Promise.allを廃止。月別表示後、少数並列で株価だけ順次補完する。
+  const status=document.getElementById("benefitStatus");
+  let next=0, done=0;
+  const worker=async()=>{
+    while (token===benefitLoadToken) {
+      const i=next++;
+      if (i>=rows.length) return;
+      const x=rows[i], code=String(x.code);
+      let price=null;
+      try {
+        const q=await fetchQuote(code);
+        price=q?.price ?? null;
+      } catch(e) {}
+      updateBenefitPriceCell(code, price, token);
+      done++;
+      if (token===benefitLoadToken) {
+        status.textContent=`${x.month}月：${rows.length}件を表示中。現在株価 ${done}/${rows.length}件取得済み`;
+      }
+    }
+  };
+  const concurrency=Math.min(4, rows.length);
+  await Promise.all(Array.from({length:concurrency}, worker));
+  if (token===benefitLoadToken) {
+    status.textContent=`${rows[0]?.month ?? ""}月：${rows.length}件を権利確定日順に表示しています。`;
+  }
+}
+
+async function loadBenefitList() {
+  const month=Number(document.getElementById("benefitMonth").value);
+  const status=document.getElementById("benefitStatus");
+  const box=document.getElementById("benefitTable");
+  const token=++benefitLoadToken;
+  status.textContent=`${month}月の株主優待データを読み込んでいます…`;
+  box.innerHTML="";
+  try {
+    const all=await getBenefitData();
+    if (token!==benefitLoadToken) return;
+
+    const dataDate=document.getElementById("benefitDataDate");
+    if (dataDate) {
+      dataDate.innerHTML=`<b>情報取得日：</b>${benefitDataUpdatedAt ? escapeHtml(String(benefitDataUpdatedAt).replace(/-/g,"/")) : "—"}　<b>全データ：</b>${all.length.toLocaleString("ja-JP")}件`;
+    }
+
+    const rows=all.filter(x=>x.month===month)
+      .sort((a,b)=>{
+        const d=benefitDateSortValue(a.recordDate)-benefitDateSortValue(b.recordDate);
+        if (d!==0) return d;
+        return String(a.code).localeCompare(String(b.code),"ja");
+      });
+
+    if (!rows.length) {
+      status.textContent=`${month}月の登録済み優待データはありません。全${all.length.toLocaleString("ja-JP")}件を読み込み済みです。`;
+      return;
+    }
+
+    // JSONを読み込めた時点ですぐ描画する。株価取得を待たない。
+    const priceMap=new Map();
+    renderBenefitRows(rows, priceMap, token);
+    status.textContent=`${month}月：${rows.length}件を表示しました。現在株価を順次取得しています…`;
+
+    // 株価取得はバックグラウンド的に少数並列で順次反映。
+    loadBenefitPricesProgressively(rows, token).catch(e=>console.warn("優待株価取得エラー",e));
   } catch(e) {
     console.warn(e);
-    status.textContent="株主優待データを読み込めませんでした。shareholder_benefits.json をGitHubへ配置してください。";
+    status.textContent=`株主優待データを読み込めませんでした。${e?.message ? " ("+e.message+")" : ""}`;
   }
 }
 
