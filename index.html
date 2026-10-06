@@ -1293,7 +1293,7 @@ fieldset{color:#334155;}
           <li>「値上がり・値下がり」タブを開くと、値上がり率・値下がり率それぞれ上位20社を表示し、お気に入り一括チェックと同じ詳細項目（現在値・PTS株価・PTS差額・目標株価・株価水準・短期上昇力・安定性・暴落リスク・PER・ROE・成長率・自己資本比率・前日比・陽線/陰線・スコア・おすすめ判定）を取得します。</li>
           <li>銘柄名をクリックすると会社四季報オンラインの該当銘柄ページが開きます。</li>
           <li>現在値をクリックするとYahoo!ファイナンスの株価チャートが新しいタブで開きます。</li>
-          <li>ランキングはYahoo!ファイナンスの掲載内容に基づき、配信元の更新時刻が表示されます。リアルタイム配信ではなく、遅延する場合があります。</li>
+          <li>ランキングには取得した市場データの更新時刻が表示されます。リアルタイム配信ではなく、遅延する場合があります。</li>
         </ul>
         <h3>7. 各表の列とリンクについて</h3>
         <p class="muted">一括チェック、AIおすすめ銘柄、値上がり・値下がりなどの表に表示される主な列の意味です。取得できない項目は「—」で表示されます。</p>
@@ -2503,7 +2503,7 @@ async function loadFxPage(force = false) {
       }
       quoteBox.innerHTML = `<div class="fx-rate">${price.toLocaleString("ja-JP", {minimumFractionDigits: 3, maximumFractionDigits: 3})} 円</div>
         <div class="${rateClass}">前日比 ${q.change != null ? `${q.change >= 0 ? "+" : ""}${Number(q.change).toFixed(3)}円` : "—"} (${change != null ? `${change >= 0 ? "+" : ""}${Number(change).toFixed(2)}%` : "—"})</div>
-        <p><b>今後の円高・円安の方向感（直近約5営業日ベース）</b><br>${outlook}</p><p class="muted">直近の傾向をもとにした参考コメントです。将来の値動きを保証するものではありません。データ時刻: ${asOf} / Yahoo Finance</p>`;
+        <p><b>今後の円高・円安の方向感（直近約5営業日ベース）</b><br>${outlook}</p><p class="muted">直近の傾向をもとにした参考コメントです。将来の値動きを保証するものではありません。データ時刻: ${asOf}</p>`;
       renderFxNews(n.news || []);
       await loadFxChart("day");
       fxLoaded = true;
