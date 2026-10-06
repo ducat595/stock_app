@@ -2308,9 +2308,11 @@ async function fetchQuote(code) {
   const crashRiskPct = maxDrawdown == null ? null : Math.abs(maxDrawdown);
   const crashRisk = crashRiskPct == null ? null : (crashRiskPct >= 15 ? "高" : (crashRiskPct >= 8 ? "中" : "低"));
 
-  // 目標株価・推奨（取れる場合のみ）
-  // 財務指標はここでは扱わない。PER/ROE/成長率/自己資本比率は
-  // /api/fundamentals の Yahoo!ファイナンス日本版表示値だけを使う。
+  // データソースの役割分担（v36.1）
+  // 株価・PERなど市場時点値 = 現在の市場データ取得系
+  // ROE・売上成長率・自己資本比率など財務実績 = EDINETのみ
+  // 目標株価・会社予想などEDINETにない予想値 = 従来の予想データ取得系
+  // EDINETで取得できる財務実績をYahoo側で補完しない。
   let target = null;
   let rec = null;
   let per = null;
@@ -2335,14 +2337,23 @@ async function fetchQuote(code) {
       };
       target = raw(fd.targetMeanPrice);
       rec = fd.recommendationKey || null;
+      const stats = summary.defaultKeyStatistics || {};
+      const detail = summary.summaryDetail || {};
+      per = raw(stats.trailingPE) ?? raw(detail.trailingPE) ?? raw(stats.forwardPE) ?? raw(detail.forwardPE);
       industry = profile.industry || profile.sector || industry;
     }
   } catch (e) { /* 目標株価が取れなくても続行 */ }
 
-  // v35: 財務4指標の唯一の取得ルート。
-  // APIが返す値は既に表示単位なので、100倍/100分の1などの変換をしない。
+  // v36.7: 財務実績はEDINETに一本化。
+  // ROE・売上成長率・自己資本比率はEDINET XBRLから取得。
+  // PERだけは現在株価を必要とする市場指標なので従来の市場データを使用する。
   try {
-    const rf = await fetch(`${API_BASE}/api/fundamentals?symbol=${encodeURIComponent(symbol)}`);
+    const edinetController = new AbortController();
+    const edinetTimer = setTimeout(() => edinetController.abort(), 15000);
+    const rf = await fetch(`${API_BASE}/api/fundamentals?symbol=${encodeURIComponent(symbol)}`, {
+      signal: edinetController.signal
+    });
+    clearTimeout(edinetTimer);
     if (rf.ok) {
       const fm = await rf.json();
       const num = value => {
@@ -2350,13 +2361,14 @@ async function fetchQuote(code) {
         const x = Number(value);
         return Number.isFinite(x) ? x : null;
       };
-      per = num(fm.per);
       roe = num(fm.roe);
       growthRate = num(fm.growthRate);
       equityRatio = num(fm.equityRatio);
       growthType = fm.growthType || "売上";
     }
-  } catch (e) { /* 財務指標取得失敗時だけ — 表示 */ }
+  } catch (e) {
+    /* EDINET取得失敗/タイムアウト時だけ財務実績を — 表示。市場データ側は継続する。 */
+  }
 
 
   if (target && price && target > price * 1.1) score += 10;
