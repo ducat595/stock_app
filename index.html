@@ -2309,81 +2309,55 @@ async function fetchQuote(code) {
   const crashRisk = crashRiskPct == null ? null : (crashRiskPct >= 15 ? "高" : (crashRiskPct >= 8 ? "中" : "低"));
 
   // 目標株価・推奨（取れる場合のみ）
+  // 財務指標はここでは扱わない。PER/ROE/成長率/自己資本比率は
+  // /api/fundamentals の Yahoo!ファイナンス日本版表示値だけを使う。
   let target = null;
   let rec = null;
   let per = null;
-  let perType = "実績";
+  let perType = "予想";
   let roe = null;
   let growthRate = null;
-  let growthType = "利益";
+  let growthType = "売上";
   let equityRatio = null;
   let industry = RECOMMENDED_INDUSTRIES[codeOnly] || null;
+
+  // 目標株価・推奨だけは従来APIを維持（財務4指標とは完全分離）。
   try {
-    const u2 = `${API_BASE}/api/quoteSummary?symbol=${encodeURIComponent(symbol)}`;
-    const r2 = await fetch(u2);
+    const r2 = await fetch(`${API_BASE}/api/quoteSummary?symbol=${encodeURIComponent(symbol)}`);
     if (r2.ok) {
       const d2 = await r2.json();
       const summary = d2.quoteSummary?.result?.[0] || {};
       const fd = summary.financialData || {};
-      const stats = summary.defaultKeyStatistics || {};
-      const detail = summary.summaryDetail || {};
-      const balance = summary.balanceSheetHistory?.balanceSheetStatements?.[0] || {};
-      const income = summary.incomeStatementHistory?.incomeStatementHistory?.[0] || {};
-      const jpMetrics = summary.jpMetrics || {};
       const profile = summary.assetProfile || {};
-      industry = profile.industry || profile.sector || jpMetrics.industry || industry;
-      const rawValue = value => {
-        const raw = value?.raw ?? value;
-        if (raw == null || raw === "" || raw === "—" || raw === "-") return null;
-        const number = Number(raw);
-        return Number.isFinite(number) ? number : null;
+      const raw = value => {
+        const x = Number(value?.raw ?? value);
+        return Number.isFinite(x) ? x : null;
       };
-      target = rawValue(fd.targetMeanPrice);
+      target = raw(fd.targetMeanPrice);
       rec = fd.recommendationKey || null;
-      roe = rawValue(fd.returnOnEquity);
-      growthRate = rawValue(fd.earningsGrowth);
-      if (growthRate == null) {
-        growthRate = rawValue(fd.revenueGrowth);
-        if (growthRate != null) growthType = "売上";
-      }
-      per = rawValue(stats.trailingPE) ?? rawValue(detail.trailingPE);
-      if (per == null) {
-        const trailingEps = rawValue(stats.trailingEps);
-        if (trailingEps != null && trailingEps > 0 && price != null) per = price / trailingEps;
-      }
-      if (per == null) {
-        per = rawValue(stats.forwardPE) ?? rawValue(detail.forwardPE);
-        if (per != null) perType = "予想";
-      }
-      const assets = rawValue(balance.totalAssets);
-      const equity = rawValue(balance.totalStockholderEquity) ?? rawValue(balance.totalStockholdersEquity) ?? rawValue(balance.stockholdersEquity);
-      if (assets > 0 && equity != null) equityRatio = equity / assets * 100;
-      if (roe == null && equity > 0) {
-        const netIncome = rawValue(income.netIncome) ?? rawValue(income.netIncomeApplicableToCommonShares);
-        if (netIncome != null) roe = netIncome / equity;
-      }
-
-      // Yahoo Finance国際APIが制限された場合は、Render側がYahoo!ファイナンス日本版から取得した値を使う。
-      if (per == null) {
-        per = rawValue(jpMetrics.per);
-        if (per != null) perType = "予想";
-      }
-      if (roe == null) {
-        const jpRoe = rawValue(jpMetrics.roe);
-        if (jpRoe != null) roe = jpRoe / 100; // jpMetricsは%値
-      }
-      if (growthRate == null) {
-        const jpGrowth = rawValue(jpMetrics.growthRate);
-        if (jpGrowth != null) {
-          growthRate = jpGrowth / 100; // jpMetricsは%値
-          growthType = jpMetrics.growthType || "売上";
-        }
-      }
-      if (equityRatio == null) {
-        equityRatio = rawValue(jpMetrics.equityRatio); // すでに%値
-      }
+      industry = profile.industry || profile.sector || industry;
     }
-  } catch (e) { /* CORS等で失敗しても続行 */ }
+  } catch (e) { /* 目標株価が取れなくても続行 */ }
+
+  // v35: 財務4指標の唯一の取得ルート。
+  // APIが返す値は既に表示単位なので、100倍/100分の1などの変換をしない。
+  try {
+    const rf = await fetch(`${API_BASE}/api/fundamentals?symbol=${encodeURIComponent(symbol)}`);
+    if (rf.ok) {
+      const fm = await rf.json();
+      const num = value => {
+        if (value == null || value === "" || value === "—" || value === "-") return null;
+        const x = Number(value);
+        return Number.isFinite(x) ? x : null;
+      };
+      per = num(fm.per);
+      roe = num(fm.roe);
+      growthRate = num(fm.growthRate);
+      equityRatio = num(fm.equityRatio);
+      growthType = fm.growthType || "売上";
+    }
+  } catch (e) { /* 財務指標取得失敗時だけ — 表示 */ }
+
 
   if (target && price && target > price * 1.1) score += 10;
   else if (target && price && target < price * 0.95) score -= 5;
@@ -2402,8 +2376,8 @@ async function fetchQuote(code) {
     name: jpName(codeOnly) || getName(codeOnly) || codeOnly,
     price, change, changePct, candle, score, target, rec, recommendLabel,
     shortTermStrength, stability, crashRisk, crashRiskPct, recentDailyVolatility, per, perType,
-    roe: roe == null ? null : roe * 100, equityRatio,
-    growthRate: growthRate == null ? null : growthRate * 100, growthType, industry,
+    roe, equityRatio,
+    growthRate, growthType, industry,
     asOf: meta.regularMarketTime || null,
     currency: meta.currency || "JPY",
   };
