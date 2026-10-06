@@ -2365,12 +2365,7 @@ async function fetchQuote(code) {
   // ROE・売上成長率・自己資本比率はEDINET XBRLから取得。
   // PERだけは現在株価を必要とする市場指標なので従来の市場データを使用する。
   try {
-    const edinetController = new AbortController();
-    const edinetTimer = setTimeout(() => edinetController.abort(), 15000);
-    const rf = await fetch(`${API_BASE}/api/fundamentals?symbol=${encodeURIComponent(symbol)}`, {
-      signal: edinetController.signal
-    });
-    clearTimeout(edinetTimer);
+    const rf = await fetch(`${API_BASE}/api/fundamentals?symbol=${encodeURIComponent(symbol)}`);
     if (rf.ok) {
       const fm = await rf.json();
       const num = value => {
@@ -2384,7 +2379,7 @@ async function fetchQuote(code) {
       growthType = fm.growthType || "売上";
     }
   } catch (e) {
-    /* EDINET取得失敗/タイムアウト時だけ財務実績を — 表示。市場データ側は継続する。 */
+    /* EDINET取得失敗時だけ財務実績を — 表示。市場データ側は継続する。 */
   }
 
 
@@ -2754,6 +2749,45 @@ async function runCheck(isRec) {
       `<span class="loading">取得中... (${i+1}/${codes.length}) ${codes[i]} / 表示済み ${results.length}</span>`;
     try {
       const q = await fetchQuote(codes[i]);
+
+      // v36.10 safety net: EDINET 3指標がすべて欠けた場合だけ直接再取得。
+      // cold start等の一時失敗で「—」のまま固定されるのを防ぐ。
+      if (q.roe == null && q.growthRate == null && q.equityRatio == null) {
+        try {
+          const symbol = String(q.code).includes(".") ? String(q.code) : `${q.code}.T`;
+          const rf = await fetch(`${API_BASE}/api/fundamentals?symbol=${encodeURIComponent(symbol)}`);
+          if (rf.ok) {
+            const fm = await rf.json();
+            const n = v => {
+              const x = Number(v);
+              return Number.isFinite(x) ? x : null;
+            };
+            q.roe = n(fm.roe);
+            q.growthRate = n(fm.growthRate);
+            q.equityRatio = n(fm.equityRatio);
+            q.growthType = fm.growthType || q.growthType || "売上";
+          }
+        } catch (e) {}
+      }
+
+      // 市場3項目も欠けている値だけ再補完。既に取得済みの値は上書きしない。
+      if (q.per == null || q.target == null || q.changePct == null) {
+        try {
+          const symbol = String(q.code).includes(".") ? String(q.code) : `${q.code}.T`;
+          const rm = await fetch(`${API_BASE}/api/marketSnapshot?symbol=${encodeURIComponent(symbol)}`);
+          if (rm.ok) {
+            const mm = await rm.json();
+            const n = v => {
+              const x = Number(v?.raw ?? v);
+              return Number.isFinite(x) ? x : null;
+            };
+            if (q.per == null) q.per = n(mm.per);
+            if (q.target == null) q.target = n(mm.targetMeanPrice);
+            if (q.changePct == null) q.changePct = n(mm.changePct);
+          }
+        } catch (e) {}
+      }
+
       await attachIntradayOutlook(q);
       const ptsInfo = await fetchPtsInfo(codes[i]);
       q.ptsPrice = ptsInfo?.price ?? null;
