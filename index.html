@@ -2714,8 +2714,44 @@ async function runCheck(isRec) {
   document.getElementById(statusId).innerHTML = `<span class="loading">取得中... (0/${codes.length})</span>`;
   document.getElementById(tableId).innerHTML = "";
   const results = [];
+  const renderCurrentResults = () => {
+    results.sort((a, b) => b.score - a.score); // スコア高い順
+    let html = `<div class="mobile-stock-table-wrap"><table class="mobile-stock-table"><thead><tr><th>銘柄</th><th>業種</th><th>現在値</th><th>前日比(%)</th><th>PTS株価</th><th>PTS差額</th><th>目標株価</th><th>株価水準</th><th>短期上昇力</th><th>安定性</th><th>暴落リスク</th><th>PER</th><th>ROE</th><th>成長率</th><th>自己資本比率</th><th>陽線/陰線</th><th>スコア</th><th>おすすめ判定</th><th>今日の動向・大引け予想</th></tr></thead><tbody>`;
+    for (const r of results) {
+      const cls = r.score >= 75 ? "score-high" : (r.score >= 55 ? "score-mid" : "score-low");
+      const price = r.price != null ? r.price.toLocaleString("ja-JP", {maximumFractionDigits:1}) : "-";
+      const ptsPrice = r.ptsPrice != null ? Number(r.ptsPrice).toLocaleString("ja-JP", {maximumFractionDigits:1}) : "—";
+      const ptsClass = r.ptsPrice != null && r.price != null ? (r.ptsPrice > r.price ? "score-high" : (r.ptsPrice < r.price ? "score-low" : "")) : "";
+      const ptsDiffValue = r.ptsPrice != null && r.price != null ? r.ptsPrice - r.price : null;
+      const ptsDiff = ptsDiffValue != null ? (ptsDiffValue > 0 ? "+" : "") + ptsDiffValue.toLocaleString("ja-JP", {maximumFractionDigits:1}) : "—";
+      const ptsDiffClass = ptsDiffValue > 0 ? "value-positive" : (ptsDiffValue < 0 ? "value-negative" : "");
+      const target = r.target != null ? Number(r.target).toLocaleString("ja-JP", {maximumFractionDigits:1}) : "-";
+      const chg = r.changePct != null ? (r.changePct >= 0 ? "+" : "") + r.changePct.toFixed(2) + "%" : "-";
+      const dayDiff = r.changePct != null ? (Number(r.changePct) > 0 ? "+" : "") + Number(r.changePct).toFixed(2) + "%" : (r.changePercent != null ? (Number(r.changePercent) > 0 ? "+" : "") + Number(r.changePercent).toFixed(2) + "%" : "—");
+      const dayDiffValue = r.changePct != null ? Number(r.changePct) : (r.changePercent != null ? Number(r.changePercent) : 0);
+      const dayDiffClass = dayDiffValue > 0 ? "value-positive" : (dayDiffValue < 0 ? "value-negative" : "");
+      let candleLabel = r.candle;
+      if (r.candle === "陽線") candleLabel = "陽線 ↑";
+      else if (r.candle === "陰線") candleLabel = "陰線 ↓";
+      else if (r.candle === "同時線") candleLabel = "同時線 →";
+      html += `<tr class="stock-data-row">
+        <td class="mobile-card-title" data-label="銘柄"><a href="https://finance.yahoo.co.jp/quote/${r.code}.T" target="_blank">${r.code}</a>　<a href="https://shikiho.toyokeizai.net/stocks/${encodeURIComponent(r.code)}/info" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></td>
+        <td class="mobile-card-wide" data-label="業種">${escapeHtml(r.industry || RECOMMENDED_INDUSTRIES[r.code] || "—")}</td>
+        <td data-label="現在値">${r.price != null ? `<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="Yahoo!ファイナンスの株価チャートを開く">${price}円</a>` : price}</td><td data-label="前日比(%)" class="${dayDiffClass}">${dayDiff}</td><td data-label="PTS株価" class="${ptsClass}">${r.ptsPrice != null ? ptsPrice + "円" : ptsPrice}</td><td data-label="PTS差額" class="${ptsDiffClass}">${ptsDiffValue != null ? ptsDiff + "円" : ptsDiff}</td><td data-label="目標株価">${r.target != null ? target + "円" : target}</td><td data-label="株価水準">${valuationLabel(r.target, r.price)}</td>
+        <td data-label="短期上昇力" title="直近5営業日と約20営業日の騰落率から算出">${metricScore(r.shortTermStrength)}</td><td data-label="安定性" title="直近約1か月の日次変動率から算出">${metricScore(r.stability)}</td><td data-label="暴落リスク" title="直近約3か月の最大下落幅">${crashRiskDisplay(r)}</td><td data-label="PER">${perDisplay(r)}</td><td data-label="ROE">${metricPercent(r.roe)}</td><td data-label="成長率" title="${r.growthType || "利益"}成長率">${metricPercent(r.growthRate)}</td><td data-label="自己資本比率">${metricPercent(r.equityRatio)}</td><td data-label="陽線/陰線">${candleLabel}</td>
+        <td data-label="スコア" class="${cls}">${r.score}</td><td data-label="おすすめ判定">${recommendationBadge(r.recommendLabel)}</td>
+        <td class="intraday-cell">${intradayOutlookHtml(r)}</td>
+      </tr>`;
+    }
+    html += "</tbody></table></div>";
+    const tableBox = document.getElementById(tableId);
+    tableBox.innerHTML = html;  };
+
+  // v36.9: 銘柄ごとに取得完了した時点で即描画する。
+  // 全銘柄完了まで待たない。順位は取得済み銘柄の中で随時更新する。
   for (let i = 0; i < codes.length; i++) {
-    document.getElementById(statusId).innerHTML = `<span class="loading">取得中... (${i+1}/${codes.length}) ${codes[i]}</span>`;
+    document.getElementById(statusId).innerHTML =
+      `<span class="loading">取得中... (${i+1}/${codes.length}) ${codes[i]} / 表示済み ${results.length}</span>`;
     try {
       const q = await fetchQuote(codes[i]);
       await attachIntradayOutlook(q);
@@ -2726,41 +2762,21 @@ async function runCheck(isRec) {
       q.name = jpName(q.code) || (isJapaneseName ? savedName : "") || ptsInfo?.name || q.name;
       results.push(q);
     } catch (e) {
-      results.push({code: codes[i], name: getName(codes[i]), price: null, changePct: null, candle: "取得失敗", score: 0, recommendLabel: "判定不可"});
+      results.push({
+        code: codes[i], name: getName(codes[i]), price: null, changePct: null,
+        candle: "取得失敗", score: 0, recommendLabel: "判定不可"
+      });
     }
-    await new Promise(r => setTimeout(r, 200)); // 負荷軽減
+
+    // ここで即描画。ブラウザに1フレーム返してから次の銘柄へ進む。
+    renderCurrentResults();
+    document.getElementById(statusId).innerHTML =
+      `<span class="loading">取得中... (${i+1}/${codes.length}) / 表示済み ${results.length}</span>`;
+    await new Promise(requestAnimationFrame);
+    await new Promise(r => setTimeout(r, 100)); // API負荷を抑えつつ待ち時間を短縮
   }
-  results.sort((a, b) => b.score - a.score); // スコア高い順
-  let html = `<div class="mobile-stock-table-wrap"><table class="mobile-stock-table"><thead><tr><th>銘柄</th><th>業種</th><th>現在値</th><th>前日比(%)</th><th>PTS株価</th><th>PTS差額</th><th>目標株価</th><th>株価水準</th><th>短期上昇力</th><th>安定性</th><th>暴落リスク</th><th>PER</th><th>ROE</th><th>成長率</th><th>自己資本比率</th><th>陽線/陰線</th><th>スコア</th><th>おすすめ判定</th><th>今日の動向・大引け予想</th></tr></thead><tbody>`;
-  for (const r of results) {
-    const cls = r.score >= 75 ? "score-high" : (r.score >= 55 ? "score-mid" : "score-low");
-    const price = r.price != null ? r.price.toLocaleString("ja-JP", {maximumFractionDigits:1}) : "-";
-    const ptsPrice = r.ptsPrice != null ? Number(r.ptsPrice).toLocaleString("ja-JP", {maximumFractionDigits:1}) : "—";
-    const ptsClass = r.ptsPrice != null && r.price != null ? (r.ptsPrice > r.price ? "score-high" : (r.ptsPrice < r.price ? "score-low" : "")) : "";
-    const ptsDiffValue = r.ptsPrice != null && r.price != null ? r.ptsPrice - r.price : null;
-    const ptsDiff = ptsDiffValue != null ? (ptsDiffValue > 0 ? "+" : "") + ptsDiffValue.toLocaleString("ja-JP", {maximumFractionDigits:1}) : "—";
-    const ptsDiffClass = ptsDiffValue > 0 ? "value-positive" : (ptsDiffValue < 0 ? "value-negative" : "");
-    const target = r.target != null ? Number(r.target).toLocaleString("ja-JP", {maximumFractionDigits:1}) : "-";
-    const chg = r.changePct != null ? (r.changePct >= 0 ? "+" : "") + r.changePct.toFixed(2) + "%" : "-";
-    const dayDiff = r.changePct != null ? (Number(r.changePct) > 0 ? "+" : "") + Number(r.changePct).toFixed(2) + "%" : (r.changePercent != null ? (Number(r.changePercent) > 0 ? "+" : "") + Number(r.changePercent).toFixed(2) + "%" : "—");
-    const dayDiffValue = r.changePct != null ? Number(r.changePct) : (r.changePercent != null ? Number(r.changePercent) : 0);
-    const dayDiffClass = dayDiffValue > 0 ? "value-positive" : (dayDiffValue < 0 ? "value-negative" : "");
-    let candleLabel = r.candle;
-    if (r.candle === "陽線") candleLabel = "陽線 ↑";
-    else if (r.candle === "陰線") candleLabel = "陰線 ↓";
-    else if (r.candle === "同時線") candleLabel = "同時線 →";
-    html += `<tr class="stock-data-row">
-      <td class="mobile-card-title" data-label="銘柄"><a href="https://finance.yahoo.co.jp/quote/${r.code}.T" target="_blank">${r.code}</a>　<a href="https://shikiho.toyokeizai.net/stocks/${encodeURIComponent(r.code)}/info" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></td>
-      <td class="mobile-card-wide" data-label="業種">${escapeHtml(r.industry || RECOMMENDED_INDUSTRIES[r.code] || "—")}</td>
-      <td data-label="現在値">${r.price != null ? `<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="Yahoo!ファイナンスの株価チャートを開く">${price}円</a>` : price}</td><td data-label="前日比(%)" class="${dayDiffClass}">${dayDiff}</td><td data-label="PTS株価" class="${ptsClass}">${r.ptsPrice != null ? ptsPrice + "円" : ptsPrice}</td><td data-label="PTS差額" class="${ptsDiffClass}">${ptsDiffValue != null ? ptsDiff + "円" : ptsDiff}</td><td data-label="目標株価">${r.target != null ? target + "円" : target}</td><td data-label="株価水準">${valuationLabel(r.target, r.price)}</td>
-      <td data-label="短期上昇力" title="直近5営業日と約20営業日の騰落率から算出">${metricScore(r.shortTermStrength)}</td><td data-label="安定性" title="直近約1か月の日次変動率から算出">${metricScore(r.stability)}</td><td data-label="暴落リスク" title="直近約3か月の最大下落幅">${crashRiskDisplay(r)}</td><td data-label="PER">${perDisplay(r)}</td><td data-label="ROE">${metricPercent(r.roe)}</td><td data-label="成長率" title="${r.growthType || "利益"}成長率">${metricPercent(r.growthRate)}</td><td data-label="自己資本比率">${metricPercent(r.equityRatio)}</td><td data-label="陽線/陰線">${candleLabel}</td>
-      <td data-label="スコア" class="${cls}">${r.score}</td><td data-label="おすすめ判定">${recommendationBadge(r.recommendLabel)}</td>
-      <td class="intraday-cell">${intradayOutlookHtml(r)}</td>
-    </tr>`;
-  }
-  html += "</tbody></table></div>";
-  const tableBox = document.getElementById(tableId);
-  tableBox.innerHTML = html;
+
+  renderCurrentResults();
   document.getElementById(statusId).textContent = `完了: ${results.length} 銘柄`;
   trackEvent(isRec ? "recommend_check_complete" : "batch_check_complete", { stock_count: results.length });
   showMsg("チェック完了", "ok");
