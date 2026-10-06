@@ -513,6 +513,170 @@
  #checkTable td.intraday-cell .intraday-outlook, #recDetailTable td.intraday-cell .intraday-outlook, #moversTables td.intraday-cell .intraday-outlook, #detailEvaluationResult .intraday-outlook{display:block!important;visibility:visible!important;overflow:visible!important;height:auto!important;max-height:none!important;min-width:0!important;width:100%!important;box-sizing:border-box!important}
  #checkTable td.intraday-cell .closing-forecast-detail, #recDetailTable td.intraday-cell .closing-forecast-detail, #moversTables td.intraday-cell .closing-forecast-detail, #detailEvaluationResult .closing-forecast-detail{display:block!important;grid-column:1/-1!important;visibility:visible!important;height:auto!important;max-height:none!important;overflow:visible!important}
 }
+
+
+/* ===== v31: PC版も一覧をカード形式で表示 ===== */
+/* 一括チェック / AIおすすめ / 値上がり・値下がり */
+#checkTable .mobile-stock-table-wrap,
+#recDetailTable .mobile-stock-table-wrap,
+#moversTables .mobile-stock-table-wrap {
+  max-height:none !important; overflow:visible !important; border:0 !important;
+}
+#checkTable .mobile-stock-table,
+#recDetailTable .mobile-stock-table,
+#moversTables .mobile-stock-table {
+  display:block !important; width:100% !important; border:0 !important; background:transparent !important;
+}
+#checkTable .mobile-stock-table thead,
+#checkTable .mobile-stock-table > tbody > tr:first-child:not(.stock-data-row),
+#recDetailTable .mobile-stock-table thead,
+#recDetailTable .mobile-stock-table > tbody > tr:first-child:not(.stock-data-row),
+#moversTables .mobile-stock-table thead {
+  display:none !important;
+}
+#checkTable .mobile-stock-table tbody,
+#recDetailTable .mobile-stock-table tbody,
+#moversTables .mobile-stock-table tbody {
+  display:block !important; width:100% !important;
+}
+#checkTable .mobile-stock-table tr.stock-data-row,
+#recDetailTable .mobile-stock-table tr.stock-data-row,
+#moversTables .mobile-stock-table tr.stock-data-row {
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:0 !important; width:100% !important; margin:14px 0 !important; padding:14px 16px !important;
+  border:1px solid #d9e2ec !important; border-radius:14px !important; background:#fff !important;
+  box-shadow:0 3px 12px rgba(15,23,42,.07) !important; box-sizing:border-box !important;
+}
+#checkTable .mobile-stock-table td,
+#recDetailTable .mobile-stock-table td,
+#moversTables .mobile-stock-table td {
+  display:flex !important; flex-direction:column !important; align-items:flex-start !important;
+  justify-content:flex-start !important; gap:4px !important; min-width:0 !important;
+  padding:9px 10px !important; border:0 !important; border-bottom:1px solid #f0f3f7 !important;
+  text-align:left !important; white-space:normal !important; overflow-wrap:anywhere !important;
+}
+#checkTable .mobile-stock-table td::before,
+#recDetailTable .mobile-stock-table td::before,
+#moversTables .mobile-stock-table td::before {
+  content:attr(data-label) !important; color:#64748b !important; font-size:11px !important;
+  font-weight:700 !important; text-align:left !important;
+}
+#checkTable .mobile-stock-table td.mobile-card-title,
+#recDetailTable .mobile-stock-table td.mobile-card-title,
+#moversTables .mobile-stock-table td.mobile-card-title {
+  grid-column:1/-1 !important; display:block !important; font-size:17px !important; font-weight:700 !important;
+  padding:4px 8px 11px !important; border-bottom:1px solid #dfe6ee !important;
+}
+#checkTable .mobile-stock-table td.mobile-card-title::before,
+#recDetailTable .mobile-stock-table td.mobile-card-title::before,
+#moversTables .mobile-stock-table td.mobile-card-title::before { display:none !important; }
+#checkTable .mobile-stock-table td.mobile-card-wide,
+#recDetailTable .mobile-stock-table td.mobile-card-wide,
+#moversTables .mobile-stock-table td.mobile-card-wide,
+#checkTable td.intraday-cell,
+#recDetailTable td.intraday-cell,
+#moversTables td.intraday-cell { grid-column:1/-1 !important; }
+#checkTable td.intraday-cell,
+#recDetailTable td.intraday-cell,
+#moversTables td.intraday-cell {
+  display:block !important; padding:10px 6px 0 !important; border-bottom:0 !important;
+}
+#checkTable td.intraday-cell::before,
+#recDetailTable td.intraday-cell::before,
+#moversTables td.intraday-cell::before { display:none !important; }
+
+/* 株主優待：PCでもカード。広い画面では2社ずつ */
+.benefit-table-wrap { overflow:visible !important; }
+.benefit-table { display:block !important; width:100% !important; min-width:0 !important; border:0 !important; }
+.benefit-table thead { display:none !important; }
+.benefit-table tbody {
+  display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:14px !important; width:100% !important;
+}
+.benefit-table tr {
+  display:block !important; width:100% !important; margin:0 !important; padding:14px 16px !important;
+  box-sizing:border-box !important; border:1px solid #d9e2ec !important; border-radius:14px !important;
+  background:#fff !important; box-shadow:0 3px 12px rgba(15,23,42,.07) !important;
+}
+.benefit-table td {
+  display:grid !important; grid-template-columns:7em minmax(0,1fr) !important; gap:10px !important;
+  width:100% !important; padding:8px 0 !important; box-sizing:border-box !important;
+  border:0 !important; border-bottom:1px solid #eef2f7 !important;
+  text-align:left !important; white-space:normal !important; word-break:break-word !important;
+}
+.benefit-table td:last-child { border-bottom:0 !important; }
+.benefit-table td::before { font-weight:700 !important; color:#64748b !important; font-size:.82rem !important; }
+.benefit-table td:nth-child(1)::before { content:"権利確定日" !important; }
+.benefit-table td:nth-child(2)::before { content:"会社コード" !important; }
+.benefit-table td:nth-child(3)::before { content:"会社名" !important; }
+.benefit-table td:nth-child(4)::before { content:"現在株価" !important; }
+.benefit-table td:nth-child(5)::before { content:"業種" !important; }
+.benefit-table td:nth-child(6)::before { content:"権利条件" !important; }
+.benefit-table td:nth-child(7)::before { content:"優待内容" !important; }
+.benefit-table td:nth-child(8)::before { content:"優待状況" !important; }
+.benefit-table td:nth-child(9)::before { content:"情報元" !important; }
+.benefit-table td:nth-child(10)::before { content:"お気に入り" !important; }
+
+/* お気に入り：PCでもカード。広い画面では2銘柄ずつ */
+#favList .favorite-list-wrap { max-height:none !important; overflow:visible !important; border:0 !important; }
+#favList .favorite-responsive-table { display:block !important; width:100% !important; }
+#favList .favorite-responsive-table thead { display:none !important; }
+#favList .favorite-responsive-table tbody {
+  display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:14px !important;
+}
+#favList .favorite-responsive-table tr.favorite-card-row {
+  display:grid !important; grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+  width:100% !important; margin:0 !important; padding:14px !important;
+  border:1px solid #d9e2ec !important; border-radius:14px !important; background:#fff !important;
+  box-shadow:0 3px 12px rgba(15,23,42,.07) !important;
+}
+#favList .favorite-responsive-table td {
+  display:flex !important; flex-direction:column !important; gap:4px !important;
+  min-width:0 !important; padding:9px 6px !important; border:0 !important;
+  border-bottom:1px solid #f0f3f7 !important; text-align:left !important;
+}
+#favList .favorite-responsive-table td::before {
+  content:attr(data-label) !important; color:#64748b !important; font-size:11px !important; font-weight:700 !important;
+}
+#favList .favorite-responsive-table td.favorite-number { display:none !important; }
+#favList .favorite-responsive-table td.favorite-action { grid-column:1/-1 !important; border-bottom:0 !important; }
+#favList .favorite-responsive-table td.favorite-action .btn { width:100% !important; }
+
+/* PCではカード内の当日見通しを横に見やすく */
+@media (min-width:901px) {
+  .intraday-slots { grid-template-columns:repeat(5,minmax(0,1fr)) !important; }
+  #moversTables { gap:18px !important; align-items:flex-start !important; }
+  #moversTables section { min-width:0 !important; }
+}
+
+/* スマホは従来どおり1～2列で読みやすく */
+@media (max-width:900px) {
+  #checkTable .mobile-stock-table tr.stock-data-row,
+  #recDetailTable .mobile-stock-table tr.stock-data-row,
+  #moversTables .mobile-stock-table tr.stock-data-row {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+  }
+  .benefit-table tbody,
+  #favList .favorite-responsive-table tbody { grid-template-columns:1fr !important; }
+}
+@media (max-width:520px) {
+  #checkTable .mobile-stock-table tr.stock-data-row,
+  #recDetailTable .mobile-stock-table tr.stock-data-row,
+  #moversTables .mobile-stock-table tr.stock-data-row {
+    grid-template-columns:1fr !important;
+  }
+  #checkTable .mobile-stock-table td.mobile-card-title,
+  #recDetailTable .mobile-stock-table td.mobile-card-title,
+  #moversTables .mobile-stock-table td.mobile-card-title,
+  #checkTable .mobile-stock-table td.mobile-card-wide,
+  #recDetailTable .mobile-stock-table td.mobile-card-wide,
+  #moversTables .mobile-stock-table td.mobile-card-wide,
+  #checkTable td.intraday-cell,#recDetailTable td.intraday-cell,#moversTables td.intraday-cell {
+    grid-column:1 !important;
+  }
+}
+
 </style>
 </head>
 <body>
