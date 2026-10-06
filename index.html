@@ -995,7 +995,7 @@ fieldset{color:#334155;}
 <body>
   <div class="header">
     <h1>📈 日本株チェッカー｜株価・業績評価・今日の動向・大引け予想</h1>
-    <p>株価・企業情報はYahoo Finance等から取得しており、実際の市場データとは遅延や差異が生じる場合があります。本アプリの情報は投資判断の参考として提供するものであり、特定の銘柄の売買を推奨するものではありません。投資に関する最終的な判断は、ご自身の責任でお願いいたします。</p>
+    <p>株価・企業情報は取得時点のデータを使用しており、実際の市場データとは遅延や差異が生じる場合があります。本アプリの情報は投資判断の参考として提供するものであり、特定の銘柄の売買を推奨するものではありません。投資に関する最終的な判断は、ご自身の責任でお願いいたします。</p>
     <p>本アプリを気に入っていただけましたら、ホーム画面中ほどの「応援する」からご支援いただけると大変励みになります。</p>
     <p>機能のご要望や不具合、ご意見・ご感想などがございましたら、「改善要望を送る」からお気軽にお寄せください。</p>
   </div>
@@ -1155,7 +1155,7 @@ fieldset{color:#334155;}
     <div id="page-movers" class="page">
       <div class="card">
         <h2>📈 日本株 値上がり・値下がり率ランキング</h2>
-        <p class="muted">Yahoo!ファイナンスの日本株ランキングを表示します。銘柄名を押すと会社四季報オンラインの銘柄ページが開きます。株価は配信元の更新時刻時点の値で、リアルタイム配信ではない場合があります。</p>
+        <p class="muted">日本株の値上がり・値下がり率ランキングを表示します。銘柄名を押すと会社四季報オンラインの銘柄ページが開きます。株価は配信元の更新時刻時点の値で、リアルタイム配信ではない場合があります。</p>
         <button class="btn btn-primary" onclick="loadMovers(true)">🔄 ランキングを更新</button>
         <p id="moversStatus" class="muted"></p>
         <div id="moversTables" class="form-row" style="align-items:flex-start"></div>
@@ -1245,7 +1245,7 @@ fieldset{color:#334155;}
         <ul>
           <li>銘柄コードを入力して「コードで追加」を押すと、日本語の会社名を補って登録します。</li>
           <li>会社名を入力して「コードで追加」を押すと東証銘柄を検索します。表示された候補の「選択して追加」を押してください。</li>
-          <li>会社名をクリックすると会社四季報オンライン、コードをクリックするとYahoo!ファイナンスが開きます。</li>
+          <li>会社名をクリックすると会社四季報オンライン、コードをクリックすると株価情報ページが開きます。</li>
           <li>お気に入りは同じブラウザーに保存されます。15件を超える場合はリスト内をスクロールできます。</li>
           <li>お気に入りを追加・変更すると、最新の一覧をブラウザー内の既定バックアップへ自動保存します。「お気に入り復元」を押すとファイル選択をせず、この既定バックアップを自動で読み込んで復元します。</li>
           <li>追加時には機種変更・端末初期化に備えて「日本株チェッカー_お気に入り_YYYYMMDD_HHMMSS.json」も端末へ自動保存します。</li>
@@ -1256,7 +1256,7 @@ fieldset{color:#334155;}
         <ul>
           <li>「株銘柄詳細評価」では、銘柄コード・日本語名称・英語名称を入力して「検索」を押すと、東証銘柄の候補を検索できます。</li>
           <li>検索結果の「詳細評価」を押すと、銘柄コード・日本語名称・業種、現在株価、目標株価、目標株価との差、短期視点・長期視点の参考評価を表示します。</li>
-          <li>評価カード上部の銘柄コードをクリックするとYahoo!ファイナンスの株価チャート、日本語名称をクリックすると会社四季報オンラインの銘柄個別ページが開きます。</li>
+          <li>評価カード上部の銘柄コードをクリックすると株価チャート、日本語名称をクリックすると会社四季報オンラインの銘柄個別ページが開きます。</li>
           <li>短期視点は直近の値動き、前日比、ローソク足などをもとに「強気・中立・弱気」で表示します。短期の予想レンジは直近約20営業日の値動きから計算した、約5営業日の統計的な参考範囲です。</li>
           <li>長期視点は目標株価との乖離、成長率、ROE、自己資本比率、PERなど、取得できた指標をもとに「強気・中立・弱気」で表示します。</li>
           <li>強気は赤系、中立は黄系、弱気は青系で色分けします。目標株価など取得できない項目は「—」になります。</li>
@@ -1268,7 +1268,7 @@ fieldset{color:#334155;}
           <li>「最新データを取得して一括チェック」を押すと、お気に入りの現在値、PTS株価、目標株価、株価水準（割安/妥当/割高）、前日比、陽線/陰線、スコアを取得します。</li>
           <li>結果はスコア順です。PTS株価は現在値より高いと緑、低いと赤で表示し、隣にPTS差額（PTS株価−現在値）を表示します。</li>
           <li>スマートフォンでは横長の表を1銘柄1カード形式に切り替えて表示します。PCでは従来どおり表形式で表示します。</li>
-          <li>現在値をクリックするとYahoo!ファイナンスの株価チャートが新しいタブで開きます。</li>
+          <li>現在値をクリックすると株価チャートが新しいタブで開きます。</li>
           <li>一括チェックでは成長率（利益成長率を優先し、未取得時は売上成長率）を表示します。</li>
           <li>短期上昇力・安定性は直近の日足変動からの参考スコア、暴落リスクは直近約3か月の最大下落幅です。PER・ROE・自己資本比率・成長率は取得できた財務データを表示します。未取得時は「—」になります。</li>
         </ul>
@@ -1283,7 +1283,7 @@ fieldset{color:#334155;}
           <li>タブを開くと、現在値・目標株価・株価水準（割安/妥当/割高）・陽線/陰線・スコア・おすすめ判定を自動取得します。</li>
           <li>一覧に短期上昇力・安定性・暴落リスク・PER・ROE・成長率・自己資本比率を表示します。数値は取得できた最新データに基づく参考情報です。</li>
           <li>スマートフォンでは銘柄ごとのカード形式、PCでは表形式で表示します。</li>
-          <li>現在値をクリックするとYahoo!ファイナンスの株価チャートが新しいタブで開きます。</li>
+          <li>現在値をクリックすると株価チャートが新しいタブで開きます。</li>
           <li>一覧の行にマウスを重ねると、その銘柄の業種を表示します。</li>
           <li>おすすめはスコア55以上、強くおすすめは75以上です。</li>
         </ul>
@@ -1292,7 +1292,7 @@ fieldset{color:#334155;}
           <li>スマートフォンではランキングも1銘柄1カード形式、PCでは表形式で表示します。</li>
           <li>「値上がり・値下がり」タブを開くと、値上がり率・値下がり率それぞれ上位20社を表示し、お気に入り一括チェックと同じ詳細項目（現在値・PTS株価・PTS差額・目標株価・株価水準・短期上昇力・安定性・暴落リスク・PER・ROE・成長率・自己資本比率・前日比・陽線/陰線・スコア・おすすめ判定）を取得します。</li>
           <li>銘柄名をクリックすると会社四季報オンラインの該当銘柄ページが開きます。</li>
-          <li>現在値をクリックするとYahoo!ファイナンスの株価チャートが新しいタブで開きます。</li>
+          <li>現在値をクリックすると株価チャートが新しいタブで開きます。</li>
           <li>ランキングには取得した市場データの更新時刻が表示されます。リアルタイム配信ではなく、遅延する場合があります。</li>
         </ul>
         <h3>7. 各表の列とリンクについて</h3>
@@ -1300,10 +1300,10 @@ fieldset{color:#334155;}
         <div style="overflow-x:auto;">
           <table>
             <tr><th>列</th><th>内容</th><th>リンク・補足</th></tr>
-            <tr><td>コード</td><td>東証の銘柄コードです。</td><td>クリックするとYahoo!ファイナンスの銘柄ページを開きます。</td></tr>
+            <tr><td>コード</td><td>東証の銘柄コードです。</td><td>クリックすると株価情報ページを開きます。</td></tr>
             <tr><td>会社名／銘柄名</td><td>会社・銘柄の名称です。</td><td>クリックすると会社四季報オンラインの銘柄ページを開きます。</td></tr>
             <tr><td>業種</td><td>銘柄が属する主な業種・事業分野です。</td><td>取得元の分類などにより表記が異なる場合があります。</td></tr>
-            <tr><td>現在値</td><td>取得時点の株価です。</td><td>クリックするとYahoo!ファイナンスの株価チャートを開きます。</td></tr>
+            <tr><td>現在値</td><td>取得時点の株価です。</td><td>クリックすると株価チャートを開きます。</td></tr>
             <tr><td>前日比(%)</td><td>前営業日の終値に対する現在値の騰落率です。</td><td>プラスは上昇、マイナスは下落を表します。</td></tr>
             <tr><td>PTS株価</td><td>取得できた場合のPTS（私設取引システム）の株価です。</td><td>取得できない場合は「—」になります。</td></tr>
             <tr><td>PTS差額</td><td>PTS株価と通常市場の現在値との差額です。</td><td>プラスはPTSの方が高く、マイナスは低いことを示します。</td></tr>
@@ -1327,7 +1327,7 @@ fieldset{color:#334155;}
         <ul>
           <li>「株主優待検索」で1月から12月の権利確定月を選び「リスト表示」を押すと、対象銘柄を優待権利確定日順に表示します。</li>
           <li>PCでは表形式、スマートフォンでは読みやすい1社1カード形式で表示します。</li>
-          <li>会社名は会社四季報オンライン、現在株価はYahoo!ファイナンスの株価チャートへリンクします。</li>
+          <li>会社名は会社四季報オンライン、現在株価は株価チャートへリンクします。</li>
           <li>右端の「お気に入り追加」から銘柄をお気に入りへ登録できます。</li>
           <li>優待制度は変更・廃止される場合があります。権利取得前に企業公式IRで最新条件を確認してください。</li>
         </ul>
@@ -1335,7 +1335,7 @@ fieldset{color:#334155;}
         <ul>
           <li>GitHub Pages版では株価・PTS・全銘柄検索の取得にオンラインAPIを使います。初回やしばらく利用がなかった後は、データ表示まで1分ほどかかることがあります。</li>
           <li>ローカル版を使う場合は、同じフォルダーにある「stock_checker_start.bat」を起動し、表示されたアドレスをブラウザーで開いてください。終了するときはコンソールで Ctrl+C を押します。</li>
-          <li>株価データはYahoo!ファイナンスから取得します。PTS価格は夜間PTS情報がある場合に表示され、データがない場合は「—」になります。</li>
+          <li>株価データは取得時点の市場データを使用します。PTS価格は夜間PTS情報がある場合に表示され、データがない場合は「—」になります。</li>
           <li>株価水準は現在値と目標株価を比較し、目標株価が10%以上高ければ「割安」、10%以上低ければ「割高」、その間は「妥当」と表示します。目標株価がない場合は判定できません。</li>
         </ul>
         <h3>注意事項</h3>
@@ -2220,7 +2220,7 @@ function resetFavorites() {
   renderFavList();
 }
 
-// ========== Yahoo Finance データ取得 ==========
+// ========== 市場データ取得 ==========
 async function fetchQuote(code) {
   const symbol = code.includes(".") ? code : code + ".T";
   const codeOnly = code.replace(/\.T$/i, "");
@@ -2732,7 +2732,7 @@ async function runCheck(isRec) {
       html += `<tr class="stock-data-row">
         <td class="mobile-card-title" data-label="銘柄"><a href="https://finance.yahoo.co.jp/quote/${r.code}.T" target="_blank">${r.code}</a>　<a href="https://shikiho.toyokeizai.net/stocks/${encodeURIComponent(r.code)}/info" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></td>
         <td class="mobile-card-wide" data-label="業種">${escapeHtml(r.industry || RECOMMENDED_INDUSTRIES[r.code] || "—")}</td>
-        <td data-label="現在値">${r.price != null ? `<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="Yahoo!ファイナンスの株価チャートを開く">${price}円</a>` : price}</td><td data-label="前日比(%)" class="${dayDiffClass}">${dayDiff}</td><td data-label="PTS株価" class="${ptsClass}">${r.ptsPrice != null ? ptsPrice + "円" : ptsPrice}</td><td data-label="PTS差額" class="${ptsDiffClass}">${ptsDiffValue != null ? ptsDiff + "円" : ptsDiff}</td><td data-label="目標株価">${r.target != null ? target + "円" : target}</td><td data-label="株価水準">${valuationLabel(r.target, r.price)}</td>
+        <td data-label="現在値">${r.price != null ? `<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="株価チャートを開く">${price}円</a>` : price}</td><td data-label="前日比(%)" class="${dayDiffClass}">${dayDiff}</td><td data-label="PTS株価" class="${ptsClass}">${r.ptsPrice != null ? ptsPrice + "円" : ptsPrice}</td><td data-label="PTS差額" class="${ptsDiffClass}">${ptsDiffValue != null ? ptsDiff + "円" : ptsDiff}</td><td data-label="目標株価">${r.target != null ? target + "円" : target}</td><td data-label="株価水準">${valuationLabel(r.target, r.price)}</td>
         <td data-label="短期上昇力" title="直近5営業日と約20営業日の騰落率から算出">${metricScore(r.shortTermStrength)}</td><td data-label="安定性" title="直近約1か月の日次変動率から算出">${metricScore(r.stability)}</td><td data-label="暴落リスク" title="直近約3か月の最大下落幅">${crashRiskDisplay(r)}</td><td data-label="PER">${perDisplay(r)}</td><td data-label="ROE">${metricPercent(r.roe)}</td><td data-label="成長率" title="${r.growthType || "利益"}成長率">${metricPercent(r.growthRate)}</td><td data-label="自己資本比率">${metricPercent(r.equityRatio)}</td><td data-label="陽線/陰線">${candleLabel}</td>
         <td data-label="スコア" class="${cls}">${r.score}</td><td data-label="おすすめ判定">${recommendationBadge(r.recommendLabel)}</td>
         <td class="intraday-cell">${intradayOutlookHtml(r)}</td>
@@ -2878,7 +2878,7 @@ async function loadRecQuotes() {
     const price = Number(r.price).toLocaleString("ja-JP", {maximumFractionDigits: 1});
     return `<div style="border:1px solid #dfe3e8;border-radius:8px;padding:12px 14px;margin:10px 0;background:#fff;line-height:1.65;">
       <div style="font-weight:700;margin-bottom:5px;">${i + 1}位　<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T" target="_blank" rel="noopener">${escapeHtml(r.code)}</a>　${escapeHtml(r.name)}</div>
-      <div>現在値：<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="Yahoo!ファイナンスの株価チャートを開く">${price}円</a>　｜　参考スコア：<span class="${cls}">${r.score}/100</span></div>
+      <div>現在値：<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="株価チャートを開く">${price}円</a>　｜　参考スコア：<span class="${cls}">${r.score}/100</span></div>
       <div style="margin-top:6px;">${profitComment(r)}</div>
     </div>`;
   }).join("");
@@ -2912,7 +2912,7 @@ async function loadRecQuotes() {
     html += `<tr class="stock-data-row" title="業種: ${industry}">
       <td class="mobile-card-title" data-label="銘柄">${i+1}位　<a href="https://finance.yahoo.co.jp/quote/${r.code}.T" target="_blank">${r.code}</a>　<a href="https://shikiho.toyokeizai.net/stocks/${encodeURIComponent(r.code)}/info" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></td>
       <td class="mobile-card-wide" data-label="業種">${escapeHtml(r.industry || industry)}</td>
-      <td data-label="現在値">${r.price != null ? `<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="Yahoo!ファイナンスの株価チャートを開く">${price}円</a>` : price}</td>
+      <td data-label="現在値">${r.price != null ? `<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="株価チャートを開く">${price}円</a>` : price}</td>
       <td data-label="前日比(%)" class="${dayDiffClass}">${dayDiff}</td>
       <td data-label="目標株価">${r.target != null ? target + "円" : target}</td>
       <td data-label="株価水準">${valuationLabel(r.target, r.price)}</td>
@@ -2988,7 +2988,7 @@ function renderMoverTable(title, rows) {
     return `<tr class="stock-data-row">
       <td class="mobile-card-title" data-label="銘柄">${i + 1}位　<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(code)}.T" target="_blank" rel="noopener">${code}</a>　<a href="https://shikiho.toyokeizai.net/stocks/${encodeURIComponent(code)}/info" target="_blank" rel="noopener">${name}</a></td>
       <td class="mobile-card-wide" data-label="業種">${escapeHtml(r.industry || RECOMMENDED_INDUSTRIES[r.code] || "—")}</td>
-      <td data-label="現在値">${r.price != null ? `<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(code)}.T/chart" target="_blank" rel="noopener" title="Yahoo!ファイナンスの株価チャートを開く">${price}円</a>` : price}</td>
+      <td data-label="現在値">${r.price != null ? `<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(code)}.T/chart" target="_blank" rel="noopener" title="株価チャートを開く">${price}円</a>` : price}</td>
       <td data-label="前日比(%)" class="${dayDiffClass}">${dayDiff}</td>
       <td data-label="PTS株価" class="${ptsClass}">${r.ptsPrice != null ? ptsPrice + "円" : ptsPrice}</td><td data-label="PTS差額" class="${ptsDiffClass}">${ptsDiffValue != null ? ptsDiff + "円" : ptsDiff}</td><td data-label="目標株価">${r.target != null ? target + "円" : target}</td><td data-label="株価水準">${valuationLabel(r.target, r.price)}</td>
       <td data-label="短期上昇力" title="直近5営業日と約20営業日の騰落率から算出">${metricScore(r.shortTermStrength)}</td>
@@ -3083,7 +3083,7 @@ async function loadMovers(force = false) {
     box.innerHTML = renderMoverTable("値上がり率 上位20社", gainers) + renderMoverTable("値下がり率 上位20社", losers);
     refreshFavoriteButtons();
     box.dataset.loaded = "true";
-    status.textContent = `データ更新時刻: ${data.updatedAt || "配信元の表示なし"}　（${data.source || "Yahoo!ファイナンス"}）`;
+    status.textContent = `データ更新時刻: ${data.updatedAt || "配信元の表示なし"}　（${data.source || "市場データ"}）`;
   } catch (error) {
     box.dataset.loaded = "false";
     status.textContent = `取得に失敗しました: ${error.message}`;
