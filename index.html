@@ -2257,7 +2257,7 @@ async function fetchQuote(code) {
   const current = Number(price);
   const change = (Number.isFinite(current) && Number.isFinite(prev) && prev > 0)
     ? current - prev : null;
-  const changePct = change == null ? null : (change / prev * 100);
+  let changePct = change == null ? null : (change / prev * 100);
   let candle = "データ不足";
   if (n >= 1 && opens[n-1] != null && closes[n-1] != null) {
     if (closes[n-1] > opens[n-1]) candle = "陽線";
@@ -2339,12 +2339,29 @@ async function fetchQuote(code) {
       rec = fd.recommendationKey || null;
       const stats = summary.defaultKeyStatistics || {};
       const detail = summary.summaryDetail || {};
-      per = raw(stats.trailingPE) ?? raw(detail.trailingPE) ?? raw(stats.forwardPE) ?? raw(detail.forwardPE);
-      industry = profile.industry || profile.sector || industry;
+      const jpMetrics = summary.jpMetrics || {};
+      per = raw(stats.trailingPE) ?? raw(detail.trailingPE) ?? raw(stats.forwardPE) ?? raw(detail.forwardPE) ?? raw(jpMetrics.per);
+      industry = profile.industry || profile.sector || jpMetrics.industry || industry;
     }
   } catch (e) { /* 目標株価が取れなくても続行 */ }
 
-  // v36.7: 財務実績はEDINETに一本化。
+  // v36.8: PER・目標株価・前日比%は財務実績と分離した市場データ経路でも補完。
+  try {
+    const rm = await fetch(`${API_BASE}/api/marketSnapshot?symbol=${encodeURIComponent(symbol)}`);
+    if (rm.ok) {
+      const mm = await rm.json();
+      const n = value => {
+        const x = Number(value?.raw ?? value);
+        return Number.isFinite(x) ? x : null;
+      };
+      if (per == null) per = n(mm.per);
+      if (target == null) target = n(mm.targetMeanPrice);
+      const marketChangePct = n(mm.changePct);
+      if (marketChangePct != null) changePct = marketChangePct;
+    }
+  } catch (e) { /* 市場補完が失敗してもEDINET財務実績は継続 */ }
+
+  // v36.8: 財務実績はEDINETに一本化。
   // ROE・売上成長率・自己資本比率はEDINET XBRLから取得。
   // PERだけは現在株価を必要とする市場指標なので従来の市場データを使用する。
   try {
