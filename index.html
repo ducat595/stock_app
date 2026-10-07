@@ -990,6 +990,28 @@ fieldset{color:#334155;}
   }
 }
 
+
+/* v36.22 dividend monthly summary / streaming cards */
+.dividend-month-summary{max-width:1180px;margin:12px auto 0;padding:0 18px;}
+.dividend-month-summary-inner{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fff;border:1px solid #dbe5f0;border-radius:14px;padding:13px 16px;box-shadow:0 4px 18px rgba(15,23,42,.06);}
+.dividend-month-summary-title{font-size:.9rem;font-weight:800;color:#334155;}
+.dividend-month-summary-count{font-size:1.35rem;font-weight:900;color:#1769e0;margin-left:8px;}
+.dividend-month-summary-note{font-size:.72rem;color:#64748b;margin-top:3px;}
+.dividend-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px;}
+.dividend-stock-card{background:#fff;border:1px solid #dce5ef;border-radius:15px;padding:16px;box-shadow:0 4px 16px rgba(15,23,42,.055);}
+.dividend-stock-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:12px;}
+.dividend-stock-code{font-size:.78rem;font-weight:800;color:#1769e0;background:#edf5ff;border-radius:8px;padding:4px 8px;white-space:nowrap;}
+.dividend-stock-name{font-size:1rem;font-weight:850;color:#172033;line-height:1.4;}
+.dividend-card-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dividend-card-field{background:#f7f9fc;border-radius:10px;padding:9px 10px;}
+.dividend-card-label{font-size:.7rem;color:#64748b;font-weight:700;margin-bottom:3px;}
+.dividend-card-value{font-size:.88rem;color:#1f2937;font-weight:750;line-height:1.45;}
+.dividend-card-wide{grid-column:1/-1;}
+.dividend-condition-note{font-size:.72rem;color:#64748b;line-height:1.55;margin-top:10px;}
+.dividend-card-actions{display:flex;justify-content:flex-end;margin-top:12px;}
+@media(max-width:900px){.dividend-card-grid{grid-template-columns:1fr}.dividend-month-summary{padding:0 10px}.dividend-month-summary-inner{align-items:stretch;flex-direction:column}.dividend-month-summary-inner .btn{align-self:flex-start}}
+@media(max-width:520px){.dividend-card-fields{grid-template-columns:1fr}.dividend-card-wide{grid-column:auto}}
+
 </style>
 </head>
 <body>
@@ -998,6 +1020,16 @@ fieldset{color:#334155;}
     <p>株価・企業情報は取得時点のデータを使用しており、実際の市場データとは遅延や差異が生じる場合があります。本アプリの情報は投資判断の参考として提供するものであり、特定の銘柄の売買を推奨するものではありません。投資に関する最終的な判断は、ご自身の責任でお願いいたします。</p>
     <p>本アプリを気に入っていただけましたら、ホーム画面中ほどの「応援する」からご支援いただけると大変励みになります。</p>
     <p>機能のご要望や不具合、ご意見・ご感想などがございましたら、「改善要望を送る」からお気軽にお寄せください。</p>
+  </div>
+
+  <div class="dividend-month-summary" aria-label="今月の配当権利確定銘柄">
+    <div class="dividend-month-summary-inner">
+      <div>
+        <div class="dividend-month-summary-title">💰 今月の配当権利確定銘柄件数 <span id="currentDividendCount" class="dividend-month-summary-count">取得中…</span></div>
+        <div id="currentDividendCountNote" class="dividend-month-summary-note">EDINETの決算日を基にした候補件数を取得しています。</div>
+      </div>
+      <button class="btn btn-primary" type="button" onclick="openCurrentDividendList()">一覧</button>
+    </div>
   </div>
   <div class="nav">
     <a href="#page-home" data-page="home" class="active">🏠 ホーム</a>
@@ -1008,6 +1040,7 @@ fieldset{color:#334155;}
     <a href="#page-rec" data-page="rec" class="">⭐ AIおすすめ銘柄</a>
     <a href="#page-movers" data-page="movers" class="">📈 値上がり・値下がり</a>
     <a href="#page-benefits" data-page="benefits" class="">🎁 株主優待検索</a>
+    <a href="#page-dividends" data-page="dividends" class="">💰 配当検索</a>
     <a href="#page-evaluation" data-page="evaluation" class="">📊 株価の評価方法</a>
     <a href="#page-help" data-page="help" class="">❓ヘルプ</a>
   </div>
@@ -1192,6 +1225,21 @@ fieldset{color:#334155;}
     </div>
 
 <!-- 株価の評価方法 -->
+    <div id="page-dividends" class="page">
+      <div class="card">
+        <h2>💰 配当権利確定月から探す</h2>
+        <p class="muted">EDINETの有価証券報告書から1株配当実績を取得し、JPXの配当落・権利落情報を確認元として扱います。取得できた銘柄から随時表示します。</p>
+        <div class="row" style="align-items:end;gap:10px;flex-wrap:wrap">
+          <div><label for="dividendMonth"><b>権利確定月</b></label><select id="dividendMonth" style="min-width:120px"><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></div>
+          <div><label for="dividendYear"><b>対象年</b></label><input id="dividendYear" type="number" min="2000" max="2100" style="width:110px"></div>
+          <button class="btn btn-primary" type="button" onclick="loadDividendList()">リスト表示</button>
+        </div>
+        <div class="notice" style="margin:12px 0"><b>日付の扱い：</b>EDINETコードリストの決算日から作る日付は「配当基準日候補」です。JPX無料公開情報は公表日の2週間後までのため、未確認行は「候補」と表示します。配当額はEDINET有価証券報告書から取得した1株配当実績です。</div>
+        <p id="dividendStatus" class="muted"></p>
+        <div id="dividendTable"></div>
+      </div>
+    </div>
+
     <div id="page-evaluation" class="page">
       <div class="card">
         <h2>📊 株価の評価方法</h2>
@@ -1334,6 +1382,7 @@ fieldset{color:#334155;}
         </div>
         <p class="muted">※ 外部サイトへのリンクは新しいタブで開きます。外部サイトの表示内容・提供条件は各サービスに準じます。</p>
 
+        <h3>8. 配当検索</h3><ul><li>ヘッダー直下に今月の配当権利確定候補件数を表示し、「一覧」から今月のカード一覧を開けます。</li><li>1月～12月の月を選び、配当基準日候補をカード形式で一覧表示します。</li><li>コード・名称・権利確定日候補・EDINETから取得した1株配当実績に加え、継続保有期間、現物保有条件、信用買いの扱いを表示します。</li><li>配当額は最大4件ずつ並列取得し、完了した行から随時表示します。</li><li>「詳細評価」で既存の株銘柄詳細評価タブへ移動し、同じ評価処理を実行します。</li><li>JPX無料公開の配当落・権利落情報は公表日の2週間後までのため、未確認日付は「候補」と明示します。</li></ul>
         <h3>8. 株主優待検索</h3>
         <ul>
           <li>「株主優待検索」で1月から12月の権利確定月を選び「リスト表示」を押すと、対象銘柄を優待権利確定日順に表示します。</li>
@@ -1982,6 +2031,98 @@ document.addEventListener("click", function(e) {
   hideMsg();
 }, true);
 
+
+// ========== 配当検索（EDINET + JPX） ==========
+let dividendLoadToken=0;
+function initDividendPage(){
+  const now=new Date();
+  const y=document.getElementById('dividendYear'); const m=document.getElementById('dividendMonth');
+  if(y&&!y.value)y.value=now.getFullYear(); if(m)m.value=String(now.getMonth()+1);
+}
+function openDividendDetail(code){
+  location.hash='#page-detail';
+  openPage('detail');
+  const input=document.getElementById('detailSearchInput'); if(input) input.value=code;
+  const box=document.getElementById('detailSearchResults'); if(box) box.innerHTML='';
+  evaluateDetailStock(String(code));
+}
+function renderDividendRows(items,token){
+  if(token!==dividendLoadToken)return;
+  const box=document.getElementById('dividendTable');
+  if(!items.length){box.innerHTML='<p class="muted">該当銘柄がありません。</p>';return;}
+  box.innerHTML=`<div class="dividend-card-grid">${items.map(x=>{
+    const d=x.recordDate?String(x.recordDate).replaceAll('-','/'):'—';
+    const dateLabel=x.recordDateVerified?d:`${d}（候補）`;
+    const div=x._loading?'取得中…':x.dividend==null?'—':`${Number(x.dividend).toLocaleString('ja-JP',{maximumFractionDigits:4})}円`;
+    const hold=x.holdingPeriod||'原則なし（基準日時点で株主名簿に記載）';
+    const method=x.acquisitionMethod||'現物保有が必要';
+    const margin=x.marginBuyTreatment||'信用買いは配当そのものではなく配当金相当額の扱い';
+    return `<article class="dividend-stock-card">
+      <div class="dividend-stock-card-head">
+        <div class="dividend-stock-name">${escapeHtml(x.name||x.code)}</div>
+        <div class="dividend-stock-code">${escapeHtml(x.code)}</div>
+      </div>
+      <div class="dividend-card-fields">
+        <div class="dividend-card-field"><div class="dividend-card-label">権利確定日</div><div class="dividend-card-value">${escapeHtml(dateLabel)}</div></div>
+        <div class="dividend-card-field"><div class="dividend-card-label">1株配当</div><div class="dividend-card-value">${escapeHtml(div)}</div></div>
+        <div class="dividend-card-field"><div class="dividend-card-label">継続保有期間</div><div class="dividend-card-value">${escapeHtml(hold)}</div></div>
+        <div class="dividend-card-field"><div class="dividend-card-label">権利取得方法</div><div class="dividend-card-value">${escapeHtml(method)}</div></div>
+        <div class="dividend-card-field dividend-card-wide"><div class="dividend-card-label">信用買いの扱い</div><div class="dividend-card-value">${escapeHtml(margin)}</div></div>
+      </div>
+      <div class="dividend-condition-note">※ 配当そのものを受け取るには基準日に株主である必要があります。制度信用の信用買いは配当金相当額の処理となります。一般信用の扱いは証券会社との契約条件をご確認ください。</div>
+      <div class="dividend-card-actions"><button class="btn btn-primary btn-sm" onclick="openDividendDetail('${escapeHtml(x.code)}')">詳細評価</button></div>
+    </article>`;
+  }).join('')}</div>`;
+}
+async function loadCurrentDividendCount(){
+  const now=new Date(), year=now.getFullYear(), month=now.getMonth()+1;
+  const count=document.getElementById('currentDividendCount'), note=document.getElementById('currentDividendCountNote');
+  if(!count)return;
+  try{
+    const r=await fetch(`${API_BASE}/api/dividends?year=${year}&month=${month}`);
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'取得失敗');
+    const n=Array.isArray(d.items)?d.items.length:0;
+    count.textContent=`${n.toLocaleString('ja-JP')}件`;
+    if(note)note.textContent=`${year}年${month}月の候補件数（EDINET決算日ベース。未確認日は候補表示）`;
+  }catch(e){
+    count.textContent='—';
+    if(note)note.textContent='件数を取得できませんでした。';
+  }
+}
+function openCurrentDividendList(){
+  const now=new Date();
+  location.hash='#page-dividends';
+  openPage('dividends');
+  const y=document.getElementById('dividendYear'), m=document.getElementById('dividendMonth');
+  if(y)y.value=String(now.getFullYear());
+  if(m)m.value=String(now.getMonth()+1);
+  loadDividendList();
+}
+async function loadDividendList(){
+  initDividendPage();
+  const month=Number(document.getElementById('dividendMonth').value), year=Number(document.getElementById('dividendYear').value);
+  const status=document.getElementById('dividendStatus'), box=document.getElementById('dividendTable');
+  const token=++dividendLoadToken; status.textContent=`${year}年${month}月の配当銘柄候補を取得しています…`; box.innerHTML='<p class="loading">EDINET銘柄情報を取得しています...</p>';
+  try{
+    const r=await fetch(`${API_BASE}/api/dividends?year=${year}&month=${month}`); const data=await r.json(); if(!r.ok)throw new Error(data.error||'取得失敗');
+    const items=(data.items||[]).map(x=>({...x,_loading:true}));
+    renderDividendRows(items,token); status.textContent=`候補 ${items.length}件を表示しました。EDINETから配当額を順次取得中… 0/${items.length}`;
+    let next=0,done=0; const workers=Math.min(4,items.length);
+    async function worker(){
+      while(token===dividendLoadToken){
+        const i=next++; if(i>=items.length)return; const x=items[i];
+        try{const rr=await fetch(`${API_BASE}/api/dividend-detail?symbol=${encodeURIComponent(x.code+'.T')}`); if(rr.ok){const d=await rr.json(); x.dividend=d.dividend; x.dividendSource=d.dividendSource; x.holdingPeriod=d.holdingPeriod||x.holdingPeriod; x.acquisitionMethod=d.acquisitionMethod||x.acquisitionMethod; x.marginBuyTreatment=d.marginBuyTreatment||x.marginBuyTreatment;}}
+        catch(e){} x._loading=false; done++;
+        if(token!==dividendLoadToken)return;
+        renderDividendRows(items,token); status.textContent=`${year}年${month}月：${items.length}件表示 / 配当額取得 ${done}/${items.length}件`;
+      }
+    }
+    await Promise.all(Array.from({length:workers},worker));
+    if(token===dividendLoadToken) status.innerHTML=`${year}年${month}月：<b>${items.length}件</b>。配当額の取得完了。日付の「候補」はJPX/会社開示で未確認です。 <a href="${escapeHtml(data.jpxSource||'https://www.jpx.co.jp/listing/others/ex-rights/')}" target="_blank" rel="noopener">JPX 配当落・権利落等情報</a>`;
+  }catch(e){if(token===dividendLoadToken){status.textContent='配当検索に失敗しました。';box.innerHTML=`<p class="muted">${escapeHtml(e.message)}</p>`;}}
+}
+
 // ========== ナビ ==========
 function openPage(page, navItem) {
   document.querySelectorAll(".nav [data-page]").forEach(b => b.classList.remove("active"));
@@ -1999,10 +2140,11 @@ function openPage(page, navItem) {
   if (page === "rec") renderRecList();
   if (page === "movers") loadMovers();
   if (page === "fx") loadFxPage();
+  if (page === "dividends" && !document.getElementById("dividendTable")?.innerHTML) initDividendPage();
 }
 
 function pageFromHash() {
-  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|evaluation|help)$/);
+  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|evaluation|help)$/);
   return m ? m[1] : "home";
 }
 
@@ -2011,6 +2153,7 @@ document.querySelectorAll(".nav [data-page]").forEach(item => {
 });
 window.addEventListener("hashchange", () => openPage(pageFromHash()));
 window.addEventListener("DOMContentLoaded", () => openPage(pageFromHash()));
+window.addEventListener("DOMContentLoaded", loadCurrentDividendCount);
 
 
 // ========== 株銘柄詳細評価 ==========
