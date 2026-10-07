@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
+<!-- Images are loaded from the same GitHub Pages directory using explicit ./ relative paths. -->
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>日本株チェッカー｜AI×企業情報×市場データの総合判断ツール</title>
 <meta name="description" content="午前・昼・午後・大引けの株価動向予測、AIおすすめランキング、月別の優待利権・配当利権確定銘柄検索をひとつに。PC・スマホ対応の日本株総合判断ツール。">
@@ -160,14 +161,31 @@ body{background:linear-gradient(180deg,#fff,#fbfdff)}
 @media(max-width:900px){.screen-story,.screen-story.reverse-real{grid-template-columns:1fr;gap:28px;min-height:auto;padding:50px 0}.reverse-real .screen-copy{order:0}.screen-pair{grid-template-columns:1fr 1fr}.pair-copy{grid-column:1/-1;grid-row:1}.real-gallery{grid-template-columns:1fr 1fr}.gallery-copy{grid-column:1/-1}}
 @media(max-width:560px){.real-screens{padding:70px 0}.real-phone{width:min(315px,88vw);border-radius:35px}.real-phone img{border-radius:26px}.screen-pair{grid-template-columns:1fr;gap:24px}.pair-copy{grid-column:auto}.real-phone.small,.real-phone.small.front{width:min(285px,82vw);transform:none;margin-top:0}.real-gallery{grid-template-columns:1fr}.gallery-copy{grid-column:auto;padding:0}.tilt-left,.tilt-right{transform:none}}
 
+
+/* Performance: render the page shell/text first; defer below-the-fold rendering. */
+.real-screens, .feature-matrix, .cta, footer {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 900px;
+}
+img {
+  max-width: 100%;
+}
+
+
+/* Main catchphrase: fixed two-line composition */
+.catch-second-line{white-space:nowrap}
+@media(max-width:560px){
+  .catch-second-line{font-size:.86em;letter-spacing:-.045em}
+}
+
 </style>
 </head>
 <body>
-<header><div class="wrap nav"><div class="brand"><img class="brand-icon" src="japan_stock_checker_app_icon.png" alt="日本株チェッカー アイコン">日本株チェッカー</div><nav class="navlinks"><a href="#strengths">強み</a><a href="#forecast">動向予測</a><a href="#tools">機能</a><a href="#devices">対応端末</a><a class="btn" href="https://ducat595.github.io/stock_app/">アプリを開く</a></nav></div></header>
+<header><div class="wrap nav"><div class="brand"><img class="brand-icon" src="./japan_stock_checker_icon_only.png" alt="日本株チェッカー アイコン" loading="eager" fetchpriority="high" decoding="async">日本株チェッカー</div><nav class="navlinks"><a href="#strengths">強み</a><a href="#forecast">動向予測</a><a href="#tools">機能</a><a href="#devices">対応端末</a><a class="btn" href="https://ducat595.github.io/stock_app/">アプリを開く</a></nav></div></header>
 <main>
 <h1 class="seo-only">日本株チェッカー｜AIによる日本株の総合判断ツール・株価動向予測・おすすめ銘柄・株主優待・配当検索</h1>
 <section class="hero"><div class="wrap hero-grid">
-<div><div class="hero-brand"><img src="japan_stock_checker_app_icon.png" alt="日本株チェッカー アプリアイコン"><div><b>日本株チェッカー</b><span>AI STOCK ANALYSIS</span></div></div><div class="eyebrow">AI × 企業情報 × 市場データから総合判断</div><div class="hero-title"><span class="hero-copy-line">次の一手が見える。<em><strong>AIによる</strong>日本株の総合判断ツール。</em></span></div><p class="lead">午前・昼・午後・大引けのタイミングで株価動向を予測。ネットから取得した各種企業情報や市場データを分析ロジックに取り込み、AIが独自判定。銘柄探しから優待・配当の利権確定月チェックまで、投資判断に必要な情報をひとつにまとめます。</p><div class="hero-actions"><a class="btn btn-primary" href="https://ducat595.github.io/stock_app/">日本株チェッカーを開く →</a><span class="device-note">PC・スマートフォン対応</span></div><div class="hero-proof">
+<div><div class="hero-brand"><img src="./japan_stock_checker_icon_only.png" alt="日本株チェッカー アプリアイコン" loading="eager" fetchpriority="high" decoding="async"><div><b>日本株チェッカー</b><span>AI STOCK ANALYSIS</span></div></div><div class="eyebrow">AI × 企業情報 × 市場データから総合判断</div><div class="hero-title"><span class="hero-copy-line">次の一手が見える。<br><span class="catch-second-line">AIによる日本株の総合判断ツール。</span></em></span></div><p class="lead">午前・昼・午後・大引けのタイミングで株価動向を予測。ネットから取得した各種企業情報や市場データを分析ロジックに取り込み、AIが独自判定。銘柄探しから優待・配当の利権確定月チェックまで、投資判断に必要な情報をひとつにまとめます。</p><div class="hero-actions"><a class="btn btn-primary" href="https://ducat595.github.io/stock_app/">日本株チェッカーを開く →</a><span class="device-note">PC・スマートフォン対応</span></div><div class="hero-proof">
 <span><b>4</b>タイミング予測</span><span><b>AI</b>独自判定</span><span><b>月別</b>優待・配当</span><span><b>PC / SP</b>対応</span>
 </div></div>
 <div class="dashboard"><div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i></div><div class="screen"><div class="screen-title">株価動向予測 / ANALYSIS</div><div class="chart"></div><div class="forecast-row"><div class="forecast"><small>午前</small><b>動向予測</b></div><div class="forecast"><small>昼</small><b>動向予測</b></div><div class="forecast"><small>午後</small><b>動向予測</b></div><div class="forecast"><small>大引け</small><b>動向予測</b></div></div></div><div class="phone"><h4>日本株チェッカー</h4><div class="p-card"><b>AIおすすめ</b>注目銘柄ランキング</div><div class="p-card"><b>配当検索</b>今月の利権確定候補</div><div class="p-card"><b>株主優待</b>月別に銘柄を確認</div></div></div>
@@ -253,24 +271,24 @@ body{background:linear-gradient(180deg,#fff,#fbfdff)}
 
  <div class="screen-story">
   <div class="screen-copy"><span>REAL 01</span><h3>AIによる株価動向予測を、<br>具体的な価格帯まで。</h3><p>銘柄詳細評価では、予測レンジ、上昇・下落確率、大引けの中心予想、重要価格ラインなどを文章で確認できます。</p><div class="screen-points"><b>予測レンジ</b><b>上昇 / 下落確率</b><b>重要価格ライン</b><b>大引け予想</b></div></div>
-  <figure class="real-phone tilt-left"><img src="screen_stock_forecast.png" alt="日本株チェッカーの株価動向予測 実画面"><figcaption>株銘柄詳細評価 / 株価動向予測</figcaption></figure>
+  <figure class="real-phone tilt-left"><img src="./screen_stock_forecast.png" alt="日本株チェッカーの株価動向予測 実画面" loading="lazy" decoding="async"><figcaption>株銘柄詳細評価 / 株価動向予測</figcaption></figure>
  </div>
 
  <div class="screen-pair">
-  <figure class="real-phone small"><img src="screen_benefits.png" alt="日本株チェッカーの株主優待検索 実画面"><figcaption>株主優待検索</figcaption></figure>
+  <figure class="real-phone small"><img src="./screen_benefits.png" alt="日本株チェッカーの株主優待検索 実画面" loading="lazy" decoding="async"><figcaption>株主優待検索</figcaption></figure>
   <div class="pair-copy"><span>REAL 02</span><h3>株主優待は、<br>利権確定月からカードで探す。</h3><p>月を指定すると対象銘柄を順次表示。会社コード、会社名、業種、利権条件、優待内容などをスマホでも見やすいカード形式で確認できます。</p><div class="flowline"><i>月を選択</i><strong>→</strong><i>対象銘柄</i><strong>→</strong><i>優待内容</i><strong>→</strong><i>詳細確認</i></div></div>
-  <figure class="real-phone small front"><img src="screen_dividend_search.png" alt="日本株チェッカーの配当検索 実画面"><figcaption>配当利権確定月から検索</figcaption></figure>
+  <figure class="real-phone small front"><img src="./screen_dividend_search.png" alt="日本株チェッカーの配当検索 実画面" loading="lazy" decoding="async"><figcaption>配当利権確定月から検索</figcaption></figure>
  </div>
 
  <div class="screen-story reverse-real">
   <div class="screen-copy"><span>REAL 03</span><h3>配当候補は、<br>取得条件まで一枚のカードに。</h3><p>利権確定日候補、1株配当、継続保有期間、現物保有、信用買いの扱いなどをまとめて表示。会社名から配当情報へ、詳細評価からアプリ内分析へ進めます。</p><div class="screen-points"><b>利権確定日</b><b>1株配当</b><b>保有条件</b><b>信用買いの扱い</b></div></div>
-  <figure class="real-phone tilt-right"><img src="screen_dividend_cards.png" alt="日本株チェッカーの配当銘柄カード 実画面"><figcaption>配当検索 / 銘柄カード</figcaption></figure>
+  <figure class="real-phone tilt-right"><img src="./screen_dividend_cards.png" alt="日本株チェッカーの配当銘柄カード 実画面" loading="lazy" decoding="async"><figcaption>配当検索 / 銘柄カード</figcaption></figure>
  </div>
 
  <div class="real-gallery">
   <div class="gallery-copy"><span>MORE REAL SCREENS</span><h3>分析だけでなく、為替や評価方法も。</h3><p>為替情報や株価の評価方法など、投資判断を補助する画面も用意しています。</p></div>
-  <figure><img src="screen_fx.png" alt="日本株チェッカー 為替情報の実画面"><figcaption>為替情報</figcaption></figure>
-  <figure><img src="screen_evaluation_guide.png" alt="日本株チェッカー 株価の評価方法の実画面"><figcaption>株価の評価方法</figcaption></figure>
+  <figure><img src="./screen_fx.png" alt="日本株チェッカー 為替情報の実画面" loading="lazy" decoding="async"><figcaption>為替情報</figcaption></figure>
+  <figure><img src="./screen_evaluation_guide.png" alt="日本株チェッカー 株価の評価方法の実画面" loading="lazy" decoding="async"><figcaption>株価の評価方法</figcaption></figure>
  </div>
 </div>
 </section>
