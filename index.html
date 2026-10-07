@@ -2291,44 +2291,58 @@ function displayName(code, storedName) {
   return code;
 }
 
-async function renderFavList() {
-  const list = loadFavs();
-  const box = document.getElementById("favList");
-  if (!list.length) { box.innerHTML = "<p>登録銘柄がありません</p>"; return; }
+let favIndustryLoadToken = 0;
 
-  box.innerHTML = `<p class="loading">業種情報を取得しています...</p>`;
-  const industries = {};
-  await Promise.all(list.map(async f => {
-    try {
-      const q = await fetchQuote(f.code);
-      industries[f.code] = q.industry || RECOMMENDED_INDUSTRIES[f.code] || "—";
-    } catch (e) {
-      industries[f.code] = RECOMMENDED_INDUSTRIES[f.code] || "—";
-    }
-  }));
-
-  let html = `<p class="muted fav-count">全 ${list.length} 件</p>`;
-  html += `<div class="favorite-list-wrap">
-    <table class="favorite-responsive-table">
-      <thead><tr><th>#</th><th>コード</th><th>会社名</th><th>業種</th><th>登録元</th><th>操作</th></tr></thead><tbody>`;
-
-  list.forEach((f, i) => {
-    const code = String(f.code).replace(/\.T$/i, "");
-    const name = displayName(code, f.name);
-    const industry = escapeHtml(industries[f.code] || "—");
-    const source = f.source === "shareholder_benefit"
+function renderFavRowsProgressively(list, industries) {
+  const box=document.getElementById("favList");
+  let html=`<p class="muted fav-count">全 ${list.length} 件</p>`;
+  html+=`<div class="favorite-list-wrap"><table class="favorite-responsive-table">
+    <thead><tr><th>#</th><th>コード</th><th>会社名</th><th>業種</th><th>登録元</th><th>操作</th></tr></thead><tbody>`;
+  list.forEach((f,i)=>{
+    const code=String(f.code).replace(/\.T$/i,"");
+    const name=displayName(code,f.name);
+    const industry=escapeHtml(industries[code] ?? "取得中…");
+    const source=f.source==="shareholder_benefit"
       ? '<span class="favorite-source-badge">株主優待から追加</span>' : "—";
-    html += `<tr class="favorite-card-row" data-fav-code="${escapeHtml(code)}">
-      <td class="favorite-number" data-label="#">${i + 1}</td>
+    html+=`<tr class="favorite-card-row" data-fav-code="${escapeHtml(code)}">
+      <td class="favorite-number" data-label="#">${i+1}</td>
       <td class="favorite-code" data-label="コード"><a class="code" href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(code)}.T" target="_blank" rel="noopener">${escapeHtml(code)}</a></td>
       <td class="favorite-name" data-label="会社名"><a class="name" href="https://shikiho.toyokeizai.net/stocks/${encodeURIComponent(code)}/info" target="_blank" rel="noopener">${escapeHtml(name)}</a></td>
-      <td data-label="業種">${industry}</td>
-      <td data-label="登録元">${source}</td>
+      <td data-label="業種">${industry}</td><td data-label="登録元">${source}</td>
       <td class="favorite-action" data-label="操作"><button class="btn btn-danger btn-sm" onclick="removeFavorite('${code}', this)">お気に入りから削除</button></td>
     </tr>`;
   });
-  html += `</tbody></table></div>`;
-  box.innerHTML = html;
+  html+=`</tbody></table></div>`;
+  box.innerHTML=html;
+}
+
+async function renderFavList() {
+  const list=loadFavs();
+  const box=document.getElementById("favList");
+  if(!list.length){box.innerHTML="<p>登録銘柄がありません</p>";return;}
+  const token=++favIndustryLoadToken;
+  const industries={};
+  // カード本体は即表示。業種だけ「取得中…」から随時更新する。
+  renderFavRowsProgressively(list,industries);
+
+  let next=0,done=0;
+  const worker=async()=>{
+    while(token===favIndustryLoadToken){
+      const i=next++;
+      if(i>=list.length)return;
+      const f=list[i],code=String(f.code).replace(/\.T$/i,"");
+      try {
+        industries[code]=await resolveIndustry(code,null) || "—";
+      } catch(e) {
+        industries[code]=RECOMMENDED_INDUSTRIES[code]||"—";
+      }
+      done++;
+      if(token!==favIndustryLoadToken)return;
+      renderFavRowsProgressively(list,industries);
+      await new Promise(requestAnimationFrame);
+    }
+  };
+  await Promise.all(Array.from({length:Math.min(4,list.length)},worker));
 }
 
 function addFavorite() {
@@ -2403,6 +2417,40 @@ function resetFavorites() {
   saveFavs(JSON.parse(JSON.stringify(DEFAULT_FAVS)));
   showMsg("初期値に戻しました", "ok");
   renderFavList();
+}
+
+// ========== 業種情報の共通補完 ==========
+const INDUSTRY_CACHE = new Map();
+
+async function resolveIndustry(code, currentIndustry=null) {
+  const codeOnly=String(code||"").replace(/\.T$/i,"").trim();
+  if (currentIndustry && currentIndustry !== "—" && currentIndustry !== "業種情報なし") {
+    INDUSTRY_CACHE.set(codeOnly,currentIndustry);
+    return currentIndustry;
+  }
+  if (INDUSTRY_CACHE.has(codeOnly)) return INDUSTRY_CACHE.get(codeOnly);
+  const mapped=RECOMMENDED_INDUSTRIES[codeOnly]||null;
+  if (mapped) {
+    INDUSTRY_CACHE.set(codeOnly,mapped);
+    return mapped;
+  }
+  try {
+    const sr=await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(codeOnly)}`);
+    if (sr.ok) {
+      const sd=await sr.json();
+      const hit=(sd.quotes||[]).find(x=>
+        String(x.symbol||"").replace(/\.T$/i,"").toUpperCase()===codeOnly.toUpperCase()
+      );
+      const industry=hit?.industry||hit?.sector||null;
+      if (industry) {
+        INDUSTRY_CACHE.set(codeOnly,industry);
+        return industry;
+      }
+    }
+  } catch(e) {}
+  // nullもキャッシュして同じ銘柄への無駄な再問い合わせを防ぐ。
+  INDUSTRY_CACHE.set(codeOnly,null);
+  return null;
 }
 
 // ========== 市場データ取得 ==========
@@ -2567,6 +2615,9 @@ async function fetchQuote(code) {
     /* EDINET取得失敗時だけ財務実績を — 表示。市場データ側は継続する。 */
   }
 
+
+  // v36.20: すべてのカードで同じ業種補完を使用する。
+  industry = await resolveIndustry(codeOnly, industry);
 
   if (target && price && target > price * 1.1) score += 10;
   else if (target && price && target < price * 0.95) score -= 5;
@@ -2973,6 +3024,25 @@ async function runCheck(isRec) {
         } catch (e) {}
       }
 
+      // v36.19: お気に入り一括チェックの業種を補完。
+      // fetchQuoteで業種が取れない銘柄は、固定マップ → 検索APIのindustry/sectorの順で補完する。
+      if (!q.industry) {
+        const codeOnly = String(q.code || codes[i]).replace(/\.T$/i, "").trim();
+        q.industry = RECOMMENDED_INDUSTRIES[codeOnly] || null;
+        if (!q.industry) {
+          try {
+            const sr = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(codeOnly)}`);
+            if (sr.ok) {
+              const sd = await sr.json();
+              const hit = (sd.quotes || []).find(x =>
+                String(x.symbol || "").replace(/\.T$/i, "").toUpperCase() === codeOnly.toUpperCase()
+              );
+              q.industry = hit?.industry || hit?.sector || null;
+            }
+          } catch (e) {}
+        }
+      }
+
       await attachIntradayOutlook(q);
       const ptsInfo = await fetchPtsInfo(codes[i]);
       q.ptsPrice = ptsInfo?.price ?? null;
@@ -2982,7 +3052,9 @@ async function runCheck(isRec) {
       results.push(q);
     } catch (e) {
       results.push({
-        code: codes[i], name: getName(codes[i]), price: null, changePct: null,
+        code: codes[i], name: getName(codes[i]),
+        industry: RECOMMENDED_INDUSTRIES[String(codes[i]).replace(/\.T$/i, "")] || null,
+        price: null, changePct: null,
         candle: "取得失敗", score: 0, recommendLabel: "判定不可"
       });
     }
@@ -3034,92 +3106,96 @@ function renderRecList(force = false) {
   `;
   loadRecQuotes();
 }
-async function loadRecQuotes() {
-  const box = document.getElementById("recDetailTable");
-  if (!box) return;
-  box.innerHTML = `<p class="loading">取得中...</p>`;
-  const results = [];
-  for (let i = 0; i < RECOMMENDED.length; i++) {
-    const s = RECOMMENDED[i];
-    box.innerHTML = `<p class="loading">取得中... (${i+1}/${RECOMMENDED.length}) ${s.code} ${s.name}</p>`;
-    try {
-      const q = await fetchQuote(s.code);
-      await attachIntradayOutlook(q);
-      q.reason = s.reason;
-      results.push(q);
-    } catch (e) {
-      results.push({
-        code: s.code, name: s.name, price: null, target: null, candle: "取得失敗",
-        score: 0, recommendLabel: "判定不可", reason: s.reason, changePct: null, rec: null
-      });
-    }
-    await new Promise(r => setTimeout(r, 250));
-  }
-  results.sort((a, b) => b.score - a.score);
+let recLoadToken = 0;
 
-  const topTen = results.filter(r => r.price != null).slice(0, 10);
-  const topTenBoxes = topTen.map((r, i) => {
-    const cls = r.score >= 75 ? "score-high" : (r.score >= 55 ? "score-mid" : "score-low");
-    const price = Number(r.price).toLocaleString("ja-JP", {maximumFractionDigits: 1});
+function renderRecResultsProgressively(results, box, completed, total, final=false) {
+  const sorted = results.filter(Boolean).slice().sort((a,b)=>b.score-a.score);
+  const topTen = sorted.filter(r=>r.price!=null).slice(0,10);
+  const topTenBoxes = topTen.map((r,i)=>{
+    const cls=r.score>=75?"score-high":(r.score>=55?"score-mid":"score-low");
+    const price=Number(r.price).toLocaleString("ja-JP",{maximumFractionDigits:1});
     return `<div style="border:1px solid #dfe3e8;border-radius:8px;padding:12px 14px;margin:10px 0;background:#fff;line-height:1.65;">
-      <div style="font-weight:700;margin-bottom:5px;">${i + 1}位　<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T" target="_blank" rel="noopener">${escapeHtml(r.code)}</a>　${escapeHtml(r.name)}</div>
+      <div style="font-weight:700;margin-bottom:5px;">${i+1}位　<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T" target="_blank" rel="noopener">${escapeHtml(r.code)}</a>　${escapeHtml(r.name)}</div>
       <div>現在値：<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="株価チャートを開く">${price}円</a>　｜　参考スコア：<span class="${cls}">${r.score}/100</span></div>
       <div style="margin-top:6px;">${profitComment(r)}</div>
     </div>`;
   }).join("");
-  const updatedAt = new Date().toLocaleString("ja-JP");
-  const topTenHtml = `<details class="fx-card">
-    <summary>利益可能性スコア 上位10社と評価コメント</summary>
-    <p class="muted">おすすめ候補20社の中で、取得できた最新データによるスコア上位です。スコアは前日比・日足の陽線/陰線・取得できた目標株価とアナリスト評価を使った比較用の参考点で、利益の確率や将来の利益を示すものではありません。株価データは遅延する場合があります。</p>
-    <p class="muted">評価更新時刻: ${updatedAt}</p>
-    <div>${topTenBoxes || `<div style="border:1px solid #dfe3e8;border-radius:8px;padding:12px 14px;margin:10px 0;background:#fff;" class="muted">評価できる株価データがありません。</div>`}</div>
+  const topTenHtml=`<details class="fx-card" open>
+    <summary>利益可能性スコア 上位10社</summary>
+    <p class="muted">${final?"全候補の取得完了":"取得済み銘柄の中で暫定順位を表示中"}：${completed}/${total}社。取得が進むと順位は入れ替わります。</p>
+    <div>${topTenBoxes||`<div class="muted">評価できた銘柄からここに表示します。</div>`}</div>
   </details>`;
 
-  let html = `<div class="mobile-stock-table-wrap" style="max-height:560px; overflow:auto; border:1px solid #eee; border-radius:8px;">
-    <table class="mobile-stock-table"><thead>
-      <tr>
-        <th>#</th><th>コード</th><th>会社名</th><th>業種</th><th>現在値</th><th>前日比(%)</th><th>目標株価</th><th>株価水準</th>
-        <th>短期上昇力</th><th>安定性</th><th>暴落リスク</th><th>PER</th><th>ROE</th><th>成長率</th><th>自己資本比率</th>
-        <th>陽線/陰線</th><th>スコア</th><th>おすすめ判定</th><th>操作</th>
-      </tr></thead><tbody>`;
-  results.forEach((r, i) => {
-    const industry = RECOMMENDED_INDUSTRIES[r.code] || "業種情報なし";
-    const price = r.price != null ? r.price.toLocaleString("ja-JP", {maximumFractionDigits: 1}) : "—";
-    const target = r.target != null ? Number(r.target).toLocaleString("ja-JP", {maximumFractionDigits: 1}) : "—";
-    const dayDiff = r.changePct != null ? (Number(r.changePct) > 0 ? "+" : "") + Number(r.changePct).toFixed(2) + "%" : (r.changePercent != null ? (Number(r.changePercent) > 0 ? "+" : "") + Number(r.changePercent).toFixed(2) + "%" : "—");
-    const dayDiffValue = r.changePct != null ? Number(r.changePct) : (r.changePercent != null ? Number(r.changePercent) : 0);
-    const dayDiffClass = dayDiffValue > 0 ? "value-positive" : (dayDiffValue < 0 ? "value-negative" : "");
-    let candle = r.candle || "—";
-    if (candle === "陽線") candle = "陽線 ↑";
-    else if (candle === "陰線") candle = "陰線 ↓";
-    else if (candle === "同時線") candle = "同時線 →";
-    const cls = r.score >= 75 ? "score-high" : (r.score >= 55 ? "score-mid" : "score-low");
-    html += `<tr class="stock-data-row" title="業種: ${industry}">
-      <td class="mobile-card-title" data-label="銘柄">${i+1}位　<a href="https://finance.yahoo.co.jp/quote/${r.code}.T" target="_blank">${r.code}</a>　<a href="https://shikiho.toyokeizai.net/stocks/${encodeURIComponent(r.code)}/info" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></td>
-      <td class="mobile-card-wide" data-label="業種">${escapeHtml(r.industry || industry)}</td>
-      <td data-label="現在値">${r.price != null ? `<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener" title="株価チャートを開く">${price}円</a>` : price}</td>
+  let html=`<div class="mobile-stock-table-wrap" style="max-height:560px;overflow:auto;border:1px solid #eee;border-radius:8px;">
+    <table class="mobile-stock-table"><thead><tr>
+      <th>#</th><th>コード</th><th>会社名</th><th>業種</th><th>現在値</th><th>前日比(%)</th><th>目標株価</th><th>株価水準</th>
+      <th>短期上昇力</th><th>安定性</th><th>暴落リスク</th><th>PER</th><th>ROE</th><th>成長率</th><th>自己資本比率</th>
+      <th>陽線/陰線</th><th>スコア</th><th>おすすめ判定</th><th>操作</th>
+    </tr></thead><tbody>`;
+  sorted.forEach((r,i)=>{
+    const industry=RECOMMENDED_INDUSTRIES[r.code]||"業種情報なし";
+    const price=r.price!=null?Number(r.price).toLocaleString("ja-JP",{maximumFractionDigits:1}):"—";
+    const target=r.target!=null?Number(r.target).toLocaleString("ja-JP",{maximumFractionDigits:1}):"—";
+    const diff=r.changePct!=null?Number(r.changePct):(r.changePercent!=null?Number(r.changePercent):null);
+    const dayDiff=diff==null?"—":`${diff>0?"+":""}${diff.toFixed(2)}%`;
+    const dayDiffClass=diff>0?"value-positive":(diff<0?"value-negative":"");
+    let candle=r.candle||"—";
+    if(candle==="陽線")candle="陽線 ↑"; else if(candle==="陰線")candle="陰線 ↓"; else if(candle==="同時線")candle="同時線 →";
+    const cls=r.score>=75?"score-high":(r.score>=55?"score-mid":"score-low");
+    html+=`<tr class="stock-data-row" title="業種: ${escapeHtml(industry)}">
+      <td class="mobile-card-title" data-label="銘柄">${i+1}位　<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T" target="_blank">${escapeHtml(r.code)}</a>　<a href="https://shikiho.toyokeizai.net/stocks/${encodeURIComponent(r.code)}/info" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></td>
+      <td class="mobile-card-wide" data-label="業種">${escapeHtml(r.industry||industry)}</td>
+      <td data-label="現在値">${r.price!=null?`<a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(r.code)}.T/chart" target="_blank" rel="noopener">${price}円</a>`:price}</td>
       <td data-label="前日比(%)" class="${dayDiffClass}">${dayDiff}</td>
-      <td data-label="目標株価">${r.target != null ? target + "円" : target}</td>
-      <td data-label="株価水準">${valuationLabel(r.target, r.price)}</td>
-      <td data-label="短期上昇力" title="直近5営業日と約20営業日の騰落率から算出">${metricScore(r.shortTermStrength)}</td>
-      <td data-label="安定性" title="直近約1か月の日次変動率から算出">${metricScore(r.stability)}</td>
-      <td data-label="暴落リスク" title="直近約3か月の最大下落幅">${crashRiskDisplay(r)}</td>
-      <td data-label="PER">${perDisplay(r)}</td>
-      <td data-label="ROE">${metricPercent(r.roe)}</td>
-      <td data-label="成長率" title="${r.growthType || "利益"}成長率">${metricPercent(r.growthRate)}</td>
-      <td data-label="自己資本比率">${metricPercent(r.equityRatio)}</td>
-      <td data-label="陽線/陰線">${candle}</td>
-      <td data-label="スコア" class="${cls}">${r.score}</td>
+      <td data-label="目標株価">${r.target!=null?target+"円":target}</td><td data-label="株価水準">${valuationLabel(r.target,r.price)}</td>
+      <td data-label="短期上昇力">${metricScore(r.shortTermStrength)}</td><td data-label="安定性">${metricScore(r.stability)}</td>
+      <td data-label="暴落リスク">${crashRiskDisplay(r)}</td><td data-label="PER">${perDisplay(r)}</td><td data-label="ROE">${metricPercent(r.roe)}</td>
+      <td data-label="成長率">${metricPercent(r.growthRate)}</td><td data-label="自己資本比率">${metricPercent(r.equityRatio)}</td>
+      <td data-label="陽線/陰線">${candle}</td><td data-label="スコア" class="${cls}">${r.score}</td>
       <td data-label="おすすめ判定">${recommendationBadge(r.recommendLabel)}</td>
       <td data-label="操作"><button class="btn btn-secondary btn-sm" onclick="addFromRec('${r.code}','${(r.name||"").replace(/'/g,"\\'")}')">お気に入り追加</button></td>
-      <td class="intraday-cell">${intradayOutlookHtml(r)}</td>
-    </tr>`;
+      <td class="intraday-cell">${intradayOutlookHtml(r)}</td></tr>`;
   });
-  html += `</tbody></table></div>
-    <p class="muted">スコア順。おすすめ＝スコア55以上、強くおすすめ＝スコア75以上（簡易評価）。目標株価は取得できない場合があります。</p>`;
-  box.innerHTML = topTenHtml + html;
+  html+=`</tbody></table></div><p class="muted">取得済み銘柄をスコア順に随時並べ替えて表示します。</p>`;
+  box.innerHTML=topTenHtml+html;
   refreshFavoriteButtons();
-  showMsg("おすすめ銘柄の評価を更新しました", "ok");
+}
+
+async function loadRecQuotes() {
+  const box=document.getElementById("recDetailTable");
+  if(!box)return;
+  const token=++recLoadToken;
+  const results=new Array(RECOMMENDED.length);
+  let next=0,completed=0;
+  box.innerHTML=`<p class="loading">取得中... (0/${RECOMMENDED.length})</p>`;
+
+  const worker=async()=>{
+    while(token===recLoadToken){
+      const i=next++;
+      if(i>=RECOMMENDED.length)return;
+      const stock=RECOMMENDED[i];
+      try{
+        const q=await fetchQuote(stock.code);
+        await attachIntradayOutlook(q);
+        q.reason=stock.reason;
+        results[i]=q;
+      }catch(e){
+        results[i]={code:stock.code,name:stock.name,price:null,target:null,candle:"取得失敗",
+          score:0,recommendLabel:"判定不可",reason:stock.reason,changePct:null,rec:null};
+      }
+      completed++;
+      if(token!==recLoadToken)return;
+      // 1銘柄取得完了ごとに、取得済み銘柄だけで暫定ランキングを即時表示。
+      renderRecResultsProgressively(results,box,completed,RECOMMENDED.length,false);
+      await new Promise(requestAnimationFrame);
+    }
+  };
+
+  // API負荷を抑えながら最大4銘柄を並行取得。
+  await Promise.all(Array.from({length:Math.min(4,RECOMMENDED.length)},worker));
+  if(token!==recLoadToken)return;
+  renderRecResultsProgressively(results,box,completed,RECOMMENDED.length,true);
+  showMsg("おすすめ銘柄の評価を更新しました","ok");
 }
 
 function addFromRec(code, name) {
@@ -3189,89 +3265,76 @@ function renderMoverTable(title, rows) {
   return `<section style="flex:1 1 100%;min-width:320px"><h3>${title}</h3><div class="mobile-stock-table-wrap" style="overflow-x:auto"><table class="mobile-stock-table"><thead><tr><th>順位</th><th>コード</th><th>銘柄名</th><th>業種</th><th>現在値</th><th>前日比(%)</th><th>PTS株価</th><th>PTS差額</th><th>目標株価</th><th>株価水準</th><th>短期上昇力</th><th>安定性</th><th>暴落リスク</th><th>PER</th><th>ROE</th><th>成長率</th><th>自己資本比率</th><th>陽線/陰線</th><th>スコア</th><th>おすすめ判定</th><th>操作</th></tr></thead><tbody>${body || empty}</tbody></table></div></section>`;
 }
 
-async function enrichMoverRows(rows, status, label) {
-  const results = new Array(rows.length);
-  let completed = 0;
-  const worker = async (index) => {
-    const base = rows[index];
-    try {
-      const q = await fetchQuote(base.code);
-      await attachIntradayOutlook(q);
-      const ptsInfo = await fetchPtsInfo(base.code);
-      q.ptsPrice = ptsInfo?.price ?? null;
-      q.name = jpName(base.code) || base.name || ptsInfo?.name || q.name;
-      q.changePercent = base.changePercent;
-
-      // ランキングAPI側に業種がある場合はそれを優先して引き継ぐ。
-      // fetchQuote() の quoteSummary で assetProfile が取得できない場合でも、
-      // base / PTS / 登録済み業種マップから補完してカードの「業種」が空にならないようにする。
-      q.industry =
-        q.industry ||
-        base.industry ||
-        base.sector ||
-        ptsInfo?.industry ||
-        ptsInfo?.sector ||
-        RECOMMENDED_INDUSTRIES[String(base.code).replace(/\.T$/i, "")] ||
-        null;
-
-      // まだ業種が無い場合は銘柄検索APIのレスポンスから補完を試す。
-      if (!q.industry) {
-        try {
-          const sr = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(String(base.code).replace(/\.T$/i, ""))}`);
-          if (sr.ok) {
-            const sd = await sr.json();
-            const hit = (sd.quotes || []).find(x =>
-              String(x.symbol || "").replace(/\.T$/i, "").toUpperCase() ===
-              String(base.code).replace(/\.T$/i, "").toUpperCase()
-            );
-            q.industry = hit?.industry || hit?.sector || null;
+let moversLoadToken = 0;
+function renderMoverProgress(box,gainers,losers){
+  box.innerHTML=renderMoverTable("値上がり率 上位20社",gainers.filter(Boolean))+renderMoverTable("値下がり率 上位20社",losers.filter(Boolean));
+  refreshFavoriteButtons();
+}
+async function enrichMoverRowsProgressively(rows,results,status,label,onUpdate,token){
+  let next=0,completed=0;
+  const worker=async()=>{
+    while(token===moversLoadToken){
+      const index=next++;
+      if(index>=rows.length)return;
+      const base=rows[index];
+      try{
+        const q=await fetchQuote(base.code);
+        const ptsInfo=await fetchPtsInfo(base.code);
+        q.ptsPrice=ptsInfo?.price??null;
+        q.name=jpName(base.code)||base.name||ptsInfo?.name||q.name;
+        q.changePercent=base.changePercent;
+        if(!q.industry){
+          q.industry=base.industry||base.sector||RECOMMENDED_INDUSTRIES[String(base.code).replace(/\.T$/i,"")]||null;
+          if(!q.industry){
+            try{
+              const sr=await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(base.code)}`);
+              if(sr.ok){
+                const sd=await sr.json();
+                const hit=(sd.quotes||[]).find(x=>String(x.symbol||"").replace(/\.T$/i,"").toUpperCase()===String(base.code).replace(/\.T$/i,"").toUpperCase());
+                q.industry=hit?.industry||hit?.sector||null;
+              }
+            }catch(e){}
           }
-        } catch (e) { /* 業種補完に失敗してもランキング表示は継続 */ }
+        }
+        results[index]=q;
+      }catch(e){
+        results[index]={...base,industry:base.industry||base.sector||RECOMMENDED_INDUSTRIES[String(base.code).replace(/\.T$/i,"")]||null,
+          price:base.price??null,ptsPrice:null,target:null,shortTermStrength:null,stability:null,crashRisk:null,crashRiskPct:null,
+          per:null,roe:null,growthRate:null,equityRatio:null,candle:"取得失敗",score:0,recommendLabel:"判定不可"};
       }
-      results[index] = q;
-    } catch (e) {
-      results[index] = {
-        ...base,
-        industry: base.industry || base.sector || RECOMMENDED_INDUSTRIES[String(base.code).replace(/\.T$/i, "")] || null,
-        price: base.price ?? null, ptsPrice: null, target: null,
-        shortTermStrength: null, stability: null, crashRisk: null, crashRiskPct: null,
-        per: null, roe: null, growthRate: null, equityRatio: null,
-        candle: "取得失敗", score: 0, recommendLabel: "判定不可"
-      };
+      completed++;
+      if(token!==moversLoadToken)return;
+      onUpdate();
+      status.textContent=`${label} 詳細データ取得中… (${completed}/${rows.length})`;
+      await new Promise(requestAnimationFrame);
     }
-    completed++;
-    status.textContent = `${label} 詳細データ取得中… (${completed}/${rows.length})`;
   };
-  // Render APIへの負荷を抑えながら、4銘柄ずつ並行取得
-  for (let i = 0; i < rows.length; i += 4) {
-    await Promise.all(rows.slice(i, i + 4).map((_, j) => worker(i + j)));
-    await new Promise(r => setTimeout(r, 150));
-  }
+  await Promise.all(Array.from({length:Math.min(4,rows.length)},worker));
   return results;
 }
-
-async function loadMovers(force = false) {
-  const status = document.getElementById("moversStatus");
-  const box = document.getElementById("moversTables");
-  if (!force && box.dataset.loaded === "true") return;
-  status.textContent = "ランキングを取得しています…";
-  box.innerHTML = "";
-  try {
-    const response = await fetch(`${API_BASE}/api/rankings`);
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "ランキングを取得できませんでした");
-    const gainersBase = (data.gainers || []).slice(0, 20);
-    const losersBase = (data.losers || []).slice(0, 20);
-    const gainers = await enrichMoverRows(gainersBase, status, "値上がり率上位20社");
-    const losers = await enrichMoverRows(losersBase, status, "値下がり率上位20社");
-    // 値上がり・値下がりとも共通 renderMoverTable を使用し、各カード最下段に時間帯別見通しを表示
-    box.innerHTML = renderMoverTable("値上がり率 上位20社", gainers) + renderMoverTable("値下がり率 上位20社", losers);
-    refreshFavoriteButtons();
-    box.dataset.loaded = "true";
-    status.textContent = `データ更新時刻: ${data.updatedAt || "配信元の表示なし"}　（${data.source || "市場データ"}）`;
-  } catch (error) {
-    box.dataset.loaded = "false";
-    status.textContent = `取得に失敗しました: ${error.message}`;
+async function loadMovers(force=false){
+  const status=document.getElementById("moversStatus"),box=document.getElementById("moversTables");
+  if(!force&&box.dataset.loaded==="true")return;
+  const token=++moversLoadToken;
+  box.dataset.loaded="false";status.textContent="ランキングを取得しています…";box.innerHTML="";
+  try{
+    const response=await fetch(`${API_BASE}/api/rankings`),data=await response.json();
+    if(!response.ok)throw new Error(data.error||"ランキングを取得できませんでした");
+    if(token!==moversLoadToken)return;
+    const gainersBase=(data.gainers||[]).slice(0,20),losersBase=(data.losers||[]).slice(0,20);
+    const gainers=new Array(gainersBase.length),losers=new Array(losersBase.length);
+    renderMoverProgress(box,gainers,losers);
+    status.textContent="ランキング取得完了。詳細データを取得できた銘柄から表示します…";
+    await Promise.all([
+      enrichMoverRowsProgressively(gainersBase,gainers,status,"値上がり率上位20社",()=>renderMoverProgress(box,gainers,losers),token),
+      enrichMoverRowsProgressively(losersBase,losers,status,"値下がり率上位20社",()=>renderMoverProgress(box,gainers,losers),token)
+    ]);
+    if(token!==moversLoadToken)return;
+    renderMoverProgress(box,gainers,losers);box.dataset.loaded="true";
+    status.textContent=`データ更新時刻: ${data.updatedAt||"配信元の表示なし"}　（${data.source||"市場データ"}）`;
+  }catch(error){
+    if(token!==moversLoadToken)return;
+    box.dataset.loaded="false";status.textContent=`取得に失敗しました: ${error.message}`;
   }
 }
 
