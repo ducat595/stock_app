@@ -3151,17 +3151,44 @@ function fmtCtx(v,d=1,s=""){v=Number(v);return Number.isFinite(v)?v.toFixed(d)+s
 function yen0(v){v=Number(v);return Number.isFinite(v)?Math.round(v).toLocaleString('ja-JP'):"—"}
 function intradayOutlookHtml(q){
  const model=q?.intradayOutlook,slots=model?.slots||[["寄り付き",50],["10時",50],["昼",50],["14時",50],["大引け",50]],overall=Math.round(slots.reduce((a,x)=>a+Number(x[1]||50),0)/slots.length);
- const line=(label,up)=>{up=Math.round(up);const down=100-up,cls=up>=54?"intraday-up":(up<=46?"intraday-down":"intraday-flat"),main=up>=54?`上がる ${up}%`:(up<=46?`下がる ${down}%`:`上 ${up}% / 下 ${down}%`);return `<div class="intraday-slot"><span>${escapeHtml(label)}</span><strong class="${cls}">${main}</strong><small>上 ${up}% / 下 ${down}%</small></div>`};
+ const timeSlots=model?.timeSlots||[];
+ const line=(label,up)=>{
+   const slot=timeSlots.find(x=>x.label===label);
+   if(slot){
+     if(slot.status==='actual')return `<div class="intraday-slot"><span>${escapeHtml(label)}（${escapeHtml(slot.time)}）</span><strong>実績 ${yenText(slot.actualPrice,2)}</strong><small>予想：— ／ 実績：${yenText(slot.actualPrice,2)}<br>取得済みの${escapeHtml(slot.priceSource||'株価')}</small></div>`;
+     if(slot.status==='unavailable')return `<div class="intraday-slot"><span>${escapeHtml(label)}</span><strong>実績未取得</strong><small>予想：— ／ 実績：—</small></div>`;
+     return `<div class="intraday-slot"><span>${escapeHtml(label)}（${escapeHtml(slot.time)}）</span><strong>予想 ${yenText(slot.forecastPrice,2)}</strong><small>上昇確率 ${Math.round(slot.upProbability??up)}% ／ 実績：未到達</small></div>`;
+   }
+   up=Math.round(up);const down=100-up,cls=up>=54?"intraday-up":(up<=46?"intraday-down":"intraday-flat"),main=up>=54?`上がる ${up}%`:(up<=46?`下がる ${down}%`:`上 ${up}% / 下 ${down}%`);return `<div class="intraday-slot"><span>${escapeHtml(label)}</span><strong class="${cls}">${main}</strong><small>上 ${up}% / 下 ${down}%</small></div>`;
+ };
  const cls=overall>=54?"intraday-up":(overall<=46?"intraday-down":"intraday-flat"),text=overall>=54?`上がる ${overall}%`:(overall<=46?`下がる ${100-overall}%`:`上 ${overall}% / 下 ${100-overall}%`),mc=q?.marketContext||{},t=mc.tech||{},st=mc.stock||{},mat=model?.materialScores||{};
  const factors=`RSI ${fmtCtx(t.rsi)} / MA5 ${fmtCtx(t.ma5)} / MA25 ${fmtCtx(t.ma25)} / MACD ${fmtCtx(t.macdHist,2)} / 出来高倍率 ${fmtCtx(mc.volumeRatio,2,"倍")} / 寄り付き価格 ${fmtCtx(mc.open,1,"円")} / PBR ${fmtCtx(st.pbr,2,"倍")} / 信用買残 ${fmtCtx(st.marginBuy,0)} / 信用売残 ${fmtCtx(st.marginSell,0)} / 信用倍率 ${fmtCtx(st.marginRatio,2,"倍")} / 日経 ${fmtCtx(mc.nikkei?.changePct,2,"%")} / TOPIX ${fmtCtx(mc.topix?.changePct,2,"%")} / NYダウ ${fmtCtx(mc.dow?.changePct,2,"%")} / S&P500 ${fmtCtx(mc.sp500?.changePct,2,"%")} / NASDAQ ${fmtCtx(mc.nasdaq?.changePct,2,"%")} / USDJPY ${fmtCtx(mc.usdJpy?.changePct,2,"%")} / 決算材料 ${fmtCtx(Number(mat.earnings)*100,0)} / ニュース材料 ${fmtCtx(Number(mat.news)*100,0)}`;
- const sourceNote=model?.source==="server-v29"?"":"<br>※予測APIを取得できなかったため中立表示です。";
- return `<div class="intraday-outlook"><div class="intraday-title"><span>今日の動向見通し</span><strong class="${cls}">${text}</strong></div><div class="intraday-slots">${slots.map(x=>line(x[0],x[1])).join("")}</div><div class="intraday-caution">${factors}${sourceNote}<br>総合モデル：5分足・出来高・寄り付き・RSI・移動平均・MACD・信用需給・PBR・国内/米国市場・決算・ニュースを利用。予測計算はサーバー側で実行しています。表示確率と大引け予想価格はモデル推定値で、将来の値動きを保証しません。</div>${closingForecastDetailHtml(q,model)}</div>`;
+ const sourceNote=model?.source?.startsWith("server-v")?"":"<br>※予測APIを取得できなかったため中立表示です。";
+ return `<div class="intraday-outlook"><div class="intraday-title"><span>今日の動向見通し</span><strong class="${cls}">${text}</strong></div><div class="intraday-slots">${slots.map(x=>line(x[0],x[1])).join("")}</div><div class="intraday-caution">${factors}${sourceNote}<br>※過去の時間帯は評価時点までに取得済みの実績を表示し、過去予測値は捏造しません。将来の予想額は未校正の参考値です。<br>総合モデル：5分足・出来高・寄り付き・RSI・移動平均・MACD・信用需給・PBR・国内/米国市場・決算・ニュースを利用。予測計算はサーバー側で実行しています。表示確率と大引け予想価格はモデル推定値で、将来の値動きを保証しません。</div>${closingForecastDetailHtml(q,model)}${demoOrderbookHtml(q)}</div>`;
+}
+async function loadDemoOrderbook(symbol, elementId){
+ const target=document.getElementById(elementId);if(!target)return;
+ try{
+  const response=await fetch(`${API_BASE}/api/orderbook?symbol=${encodeURIComponent(symbol)}`);
+  if(!response.ok)throw Error('demo unavailable');
+  const data=await response.json();
+  if(data.status!=='demo'||data.synthetic!==true)throw Error('not demo');
+  const rows=[...data.asks.map(x=>({...x,side:'売'})),...data.bids.map(x=>({...x,side:'買'}))];
+  target.innerHTML=`<strong>板情報（架空のデモ）</strong><p style="margin:4px 0;font-size:11px">実際の気配値ではありません。予測には使用しません。</p><table style="width:100%;font-size:12px"><thead><tr><th>売買</th><th>価格</th><th>数量</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${x.side}</td><td>${Number(x.price).toLocaleString('ja-JP')}</td><td>${Number(x.size).toLocaleString('ja-JP')}</td></tr>`).join('')}</tbody></table><small>デモ需給偏り ${(data.analysis.imbalance*100).toFixed(1)}%（予測不使用）</small>`;
+ }catch(e){target.textContent='板情報デモを取得できませんでした。';}
+}
+function demoOrderbookHtml(q){
+ const symbol=String(q?.code||q?.symbol||'').replace(/\.T$/,'');
+ if(!/^[0-9A-Z]{4,5}$/.test(symbol))return '';
+ const id='demo-book-'+symbol;
+ setTimeout(()=>loadDemoOrderbook(symbol,id),0);
+ return `<div id="${id}" style="margin-top:12px;padding:12px;border:1px solid #cbd5e1;border-radius:8px">板情報デモを読み込み中…</div>`;
 }
 function closingForecastDetailHtml(q,model){
  const d=model?.detail;
  if(!d)return `<div class="closing-forecast-detail" style="margin-top:10px;padding-top:10px;border-top:2px solid #cbd5e1"><strong>🎯 大引け予想価格：取得できませんでした</strong><br><small>サーバー予測を取得できないため、大引け予想を表示できません。</small></div>`;
  const esc=v=>escapeHtml(String(v??""));
- return `<div class="closing-forecast-detail" style="margin-top:10px;padding-top:10px;border-top:2px solid #cbd5e1;line-height:1.75;font-size:12px"><div class="closing-forecast-head"><strong>私の中心予想：${yen0(d.rangeLow)}～${yen0(d.rangeHigh)}円</strong><span class="closing-price">🎯 大引け ${yen0(d.center)}円前後</span><small>上昇確率 ${d.upProbability}% ／ 下落確率 ${d.downProbability}%</small></div>その中でも、現時点では<br><br><strong style="font-size:15px">🎯 大引け ${yen0(d.center)}円前後</strong><br><br>を本命にします。<br><br><strong>今日の重要ポイント</strong><br><br>${yen0(d.up1)}円突破<br>→ まず${yen0(d.up2)}円を試す<br>→ ${yen0(d.up2)}円を超えれば${yen0(d.up3)}円方向<br><br>${yen0(d.down1)}円割れ<br>→ 今日の弱さが強まり、${yen0(d.down2)}～${yen0(d.down3)}円まで調整する可能性<br><br>${yen0(d.recovery)}円回復<br>→ 前日終値を取り戻すため、午後の上昇シナリオが強くなります。<br><br>現在は${yen0(d.price)}円なので、「${esc(d.situation)}」と見ます。<br><br>ただし${esc(q?.name||q?.code||"この銘柄")}は、${esc(d.moveDesc)}。短期間の値動きが大きい場合は、利益確定売り／押し目買いなどのリスクにも注意が必要です。<br><br>一方、${esc(d.plus)}。<br><br><strong>結論：今日は「${yen0(d.key)}円を維持できるか」が最大のポイント。私は大引け${yen0(d.center)}円前後、上昇確率${d.upProbability}%、下落確率${d.downProbability}%程度と見ます。</strong><br><br>なお、${yen0(d.upTurn)}円を超えてきた場合は、この予想を一気に上方修正します。逆に${yen0(d.downTurn)}円を割った場合は下方修正です。<br><small style="color:#64748b">※支持線・抵抗線、予想レンジ、確率は取得できたデータからサーバー側で機械的に推定した参考値です。</small></div>`;
+ return `<div class="closing-forecast-detail" style="margin-top:10px;padding-top:10px;border-top:2px solid #cbd5e1;line-height:1.75;font-size:12px"><div class="closing-forecast-head"><strong>私の中心予想：${yen0(d.rangeLow)}～${yen0(d.rangeHigh)}円</strong><span class="closing-price">🎯 大引け ${yen0(d.center)}円前後</span><small>上昇確率 ${d.upProbability}% ／ 下落確率 ${d.downProbability}%</small></div>その中でも、現時点では<br><br><strong style="font-size:15px">🎯 大引け ${yen0(d.center)}円前後</strong><br><br>を本命にします。<br><br><strong>今日の重要ポイント</strong><br><br>${yen0(d.up1)}円突破<br>→ まず${yen0(d.up2)}円を試す<br>→ ${yen0(d.up2)}円を超えれば${yen0(d.up3)}円方向<br><br>${yen0(d.down1)}円割れ<br>→ 今日の弱さが強まり、${yen0(d.down2)}～${yen0(d.down3)}円まで調整する可能性<br><br>${yen0(d.recovery)}円回復<br>→ 前日終値を取り戻すため、午後の上昇シナリオが強くなります。<br><br>現在は${yen0(d.price)}円なので、「${esc(d.situation)}」と見ます。<br><br>ただし${esc(q?.name||q?.code||"この銘柄")}は、${esc(d.moveDesc)}。短期間の値動きが大きい場合は、利益確定売り／押し目買いなどのリスクにも注意が必要です。<br><br>一方、${esc(d.plus)}。<br><br><strong>結論：今日は「${yen0(d.key)}円を維持できるか」が最大のポイント。私は大引け${yen0(d.center)}円前後、上昇確率${d.upProbability}%、下落確率${d.downProbability}%程度と見ます。</strong><br><br>なお、${yen0(d.upTurn)}円を超えてきた場合は、この予想を一気に上方修正します。逆に${yen0(d.downTurn)}円を割った場合は下方修正です。<br><small style="color:#64748b">※支持線・抵抗線、予想レンジ、確率は機械的な参考値であり、確率・予想レンジは過去検証で校正済みではありません。板情報デモは予測に使用しません。</small></div>`;
 }
 
 // ========== 一括チェック ==========
