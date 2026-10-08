@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="日本株チェッカー">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
+<!-- forecast-timeslots-display-fix-v33 -->
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-63JPEC9VPV"></script>
 <script>
@@ -3122,7 +3123,7 @@ async function fetchChartData(code, tf) {
 
 
 function yenText(value, digits = 1) {
-  const n = Number(value);
+  const n = value == null || value === "" ? NaN : Number(value);
   return Number.isFinite(n) ? n.toLocaleString("ja-JP", {maximumFractionDigits:digits}) + "円" : "—";
 }
 
@@ -3153,18 +3154,21 @@ function intradayOutlookHtml(q){
  const model=q?.intradayOutlook,slots=model?.slots||[["寄り付き",50],["10時",50],["昼",50],["14時",50],["大引け",50]],overall=Math.round(slots.reduce((a,x)=>a+Number(x[1]||50),0)/slots.length);
  const timeSlots=model?.timeSlots||[];
  const line=(label,up)=>{
-   const slot=timeSlots.find(x=>x.label===label);
+   const slot=timeSlots.find(x=>String(x.label||'').trim()===label);
    if(slot){
-     if(slot.status==='actual')return `<div class="intraday-slot"><span>${escapeHtml(label)}（${escapeHtml(slot.time)}）</span><strong>実績 ${yenText(slot.actualPrice,2)}</strong><small>予想：— ／ 実績：${yenText(slot.actualPrice,2)}<br>取得済みの${escapeHtml(slot.priceSource||'株価')}</small></div>`;
-     if(slot.status==='unavailable')return `<div class="intraday-slot"><span>${escapeHtml(label)}</span><strong>実績未取得</strong><small>予想：— ／ 実績：—</small></div>`;
-     return `<div class="intraday-slot"><span>${escapeHtml(label)}（${escapeHtml(slot.time)}）</span><strong>予想 ${yenText(slot.forecastPrice,2)}</strong><small>上昇確率 ${Math.round(slot.upProbability??up)}% ／ 実績：未到達</small></div>`;
+     const when=escapeHtml(slot.time||'');
+     const source=escapeHtml(slot.priceSource||'株価データ');
+     if(slot.status==='actual')return `<div class="intraday-slot"><span>${escapeHtml(label)} ${when}</span><strong style="color:#087246">実績 ${yenText(slot.actualPrice,2)}</strong><small>予想：保存履歴なし ／ 実績：${yenText(slot.actualPrice,2)}<br>${source}</small></div>`;
+     if(slot.status==='unavailable')return `<div class="intraday-slot"><span>${escapeHtml(label)} ${when}</span><strong>実績未取得</strong><small>予想：— ／ 実績：—</small></div>`;
+     return `<div class="intraday-slot"><span>${escapeHtml(label)} ${when}</span><strong>予想 ${yenText(slot.forecastPrice,2)}</strong><small>上昇確率 ${slot.upProbability==null?'—':Math.round(Number(slot.upProbability))+'%'} ／ 実績：未到達</small></div>`;
    }
-   up=Math.round(up);const down=100-up,cls=up>=54?"intraday-up":(up<=46?"intraday-down":"intraday-flat"),main=up>=54?`上がる ${up}%`:(up<=46?`下がる ${down}%`:`上 ${up}% / 下 ${down}%`);return `<div class="intraday-slot"><span>${escapeHtml(label)}</span><strong class="${cls}">${main}</strong><small>上 ${up}% / 下 ${down}%</small></div>`;
+   if(timeSlots.length)return `<div class="intraday-slot"><span>${escapeHtml(label)}</span><strong>データ未取得</strong><small>予想：— ／ 実績：—</small></div>`;
+   up=Math.round(up);const down=100-up,cls=up>=54?"intraday-up":(up<=46?"intraday-down":"intraday-flat"),main=up>=54?`上がる ${up}%`:(up<=46?`下がる ${down}%`:`上 ${up}% / 下 ${down}%`);return `<div class="intraday-slot"><span>${escapeHtml(label)}</span><strong class="${cls}">${main}</strong><small>上 ${up}% / 下 ${down}%（価格データ未受信）</small></div>`;
  };
  const cls=overall>=54?"intraday-up":(overall<=46?"intraday-down":"intraday-flat"),text=overall>=54?`上がる ${overall}%`:(overall<=46?`下がる ${100-overall}%`:`上 ${overall}% / 下 ${100-overall}%`),mc=q?.marketContext||{},t=mc.tech||{},st=mc.stock||{},mat=model?.materialScores||{};
  const factors=`RSI ${fmtCtx(t.rsi)} / MA5 ${fmtCtx(t.ma5)} / MA25 ${fmtCtx(t.ma25)} / MACD ${fmtCtx(t.macdHist,2)} / 出来高倍率 ${fmtCtx(mc.volumeRatio,2,"倍")} / 寄り付き価格 ${fmtCtx(mc.open,1,"円")} / PBR ${fmtCtx(st.pbr,2,"倍")} / 信用買残 ${fmtCtx(st.marginBuy,0)} / 信用売残 ${fmtCtx(st.marginSell,0)} / 信用倍率 ${fmtCtx(st.marginRatio,2,"倍")} / 日経 ${fmtCtx(mc.nikkei?.changePct,2,"%")} / TOPIX ${fmtCtx(mc.topix?.changePct,2,"%")} / NYダウ ${fmtCtx(mc.dow?.changePct,2,"%")} / S&P500 ${fmtCtx(mc.sp500?.changePct,2,"%")} / NASDAQ ${fmtCtx(mc.nasdaq?.changePct,2,"%")} / USDJPY ${fmtCtx(mc.usdJpy?.changePct,2,"%")} / 決算材料 ${fmtCtx(Number(mat.earnings)*100,0)} / ニュース材料 ${fmtCtx(Number(mat.news)*100,0)}`;
  const sourceNote=model?.source?.startsWith("server-v")?"":"<br>※予測APIを取得できなかったため中立表示です。";
- return `<div class="intraday-outlook"><div class="intraday-title"><span>今日の動向見通し</span><strong class="${cls}">${text}</strong></div><div class="intraday-slots">${slots.map(x=>line(x[0],x[1])).join("")}</div><div class="intraday-caution">${factors}${sourceNote}<br>※過去の時間帯は評価時点までに取得済みの実績を表示し、過去予測値は捏造しません。将来の予想額は未校正の参考値です。<br>総合モデル：5分足・出来高・寄り付き・RSI・移動平均・MACD・信用需給・PBR・国内/米国市場・決算・ニュースを利用。予測計算はサーバー側で実行しています。表示確率と大引け予想価格はモデル推定値で、将来の値動きを保証しません。</div>${closingForecastDetailHtml(q,model)}${demoOrderbookHtml(q)}</div>`;
+ return `<div class="intraday-outlook"><div class="intraday-title"><span>今日の動向見通し</span><strong class="${cls}">${text}</strong></div><div class="intraday-slots">${["寄り付き","10時","昼","14時","大引け"].map(label=>line(label,slots.find(x=>x[0]===label)?.[1]??50)).join("")}</div><div class="intraday-caution">${factors}${sourceNote}<br>※過去の時間帯は評価時点までに取得済みの実績を表示し、過去予測値は捏造しません。将来の予想額は未校正の参考値です。<br>総合モデル：5分足・出来高・寄り付き・RSI・移動平均・MACD・信用需給・PBR・国内/米国市場・決算・ニュースを利用。予測計算はサーバー側で実行しています。表示確率と大引け予想価格はモデル推定値で、将来の値動きを保証しません。</div>${closingForecastDetailHtml(q,model)}${demoOrderbookHtml(q)}</div>`;
 }
 async function loadDemoOrderbook(symbol, elementId){
  const target=document.getElementById(elementId);if(!target)return;
