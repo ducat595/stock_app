@@ -1412,6 +1412,10 @@ fieldset{color:#334155;}
         </ul>
         <h3>2-2. 大引け予想のデータ蓄積ステータス</h3>
         <p>大引け予想欄に「蓄積あり」（過去サンプル10件以上）、「蓄積中」（5～9件）、「データ蓄積不足」（0～4件）を表示します。これは過去の大引け急変サンプル数の目安で、精度保証ではありません。データが少なくても、取得できた株価・直近の値動き・既存の参考変動幅を用いて暫定予測を表示します。データ不足の場合は予測の不確実性が高くなります。</p>
+        <h3>2-3. 予測履歴・実績のSupabase自動保存（v49）</h3>
+        <p>詳細評価した銘柄は監視対象として登録され、管理者が設定したGitHub Actionsの定期実行で、将来の予測価格と観測済みの実績株価をSupabaseに保存します。保存された予測だけを実績と照合し、後から再現した過去予測は的中率の計算に使用しません。</p>
+        <p>自動保存にはRenderの <code>HISTORY_JOB_TOKEN</code> と非公開GitHubリポジトリのActions Secretsの設定、Actionsワークフローの有効化が必要です。設定前は自動保存されません。無料サービスの休止、スケジュール遅延、株価配信の欠落、東証休場日などにより、記録できない時間帯があります。実績は5分足から取得した観測値であり、取引所の公式確定値を保証するものではありません。</p>
+        <p>予測精度の集計は管理者向け <code>/api/history/summary?symbol=7203</code> で確認できます（認証必須）。大引け予想の「蓄積あり／不足」は従来の過去値動きサンプルに基づく表示であり、Supabaseの保存件数とは別の指標です。</p>
         <h3>3. 一括チェック</h3>
         <ul>
           <li>「最新データを取得して一括チェック」を押すと、お気に入りの現在値、PTS株価、目標株価、株価水準（割安/妥当/割高）、前日比、陽線/陰線、スコアを取得します。</li>
@@ -2351,19 +2355,30 @@ async function searchDetailStocks() {
   } catch(e) { box.innerHTML=`<p class="muted">検索に失敗しました：${escapeHtml(e.message)}</p>`; }
 }
 
+let detailEvalSequence=0;
+const detailQuoteCache=new Map();
 async function evaluateDetailStock(code) {
+  const seq=++detailEvalSequence;
+  const started=performance.now();
   const result=document.getElementById("detailEvaluationResult");
-  result.innerHTML=`<p class="loading">${escapeHtml(code)} を詳細評価しています...</p>`;
+  result.innerHTML=`<p class="loading">${escapeHtml(code)} の基本情報を取得中…</p>`;
+  // Name lookup is independent of quote and forecast; run it in parallel.
+  const namePromise=fetch(`${API_BASE}/api/search?q=${encodeURIComponent(code)}`)
+    .then(r=>r.ok?r.json():null).catch(()=>null);
   try {
-    const q=await fetchQuote(code);
-    await attachIntradayOutlook(q);
+    const cached=detailQuoteCache.get(code);
+    const fresh=cached && Date.now()-cached.at<60000;
+    const q=fresh ? {...cached.data} : await fetchQuote(code);
+    if(!fresh)detailQuoteCache.set(code,{at:Date.now(),data:{...q}});
+    if(seq!==detailEvalSequence)return;
+    // Do not hold up the first paint while the expensive forecast runs.
+    const forecastPromise=attachIntradayOutlook(q).then(()=>({ok:true})).catch(()=>({ok:false}));
     let jp=jpName(code) || getName(code) || "";
     if (!jp || String(jp).trim().toUpperCase() === String(code).trim().toUpperCase()) jp="";
     let en="";
     try {
-      const sr=await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(code)}`);
-      if (sr.ok) {
-        const sd=await sr.json();
+      const sd=await Promise.race([namePromise,new Promise(resolve=>setTimeout(()=>resolve(null),450))]);
+      if (sd) {
         const hit=(sd.quotes||[]).find(x=>String(x.symbol||"").replace(/\.T$/i,"").toUpperCase()===String(code).toUpperCase());
         const apiLong=hit?.longname || "";
         const apiShort=hit?.shortname || "";
@@ -2404,11 +2419,21 @@ async function evaluateDetailStock(code) {
         <div class="detail-outlook ${long.tone}"><h3>長期視点</h3><div class="detail-view">${escapeHtml(long.view)}</div>
           <p>${escapeHtml(long.text)}</p>
         </div>
-        ${intradayOutlookHtml(q)}
+        <div id="detailForecastProgress" aria-live="polite" class="detail-outlook"><h3>時間帯別予測・大引け予測</h3><p class="loading">予測エンジンで計算中… 基本評価は先に表示しています。</p></div>
         <p class="muted">※ 短期レンジは直近の値動きから計算した統計的な参考範囲で、到達を保証する予想価格ではありません。目標株価は取得できた場合のみ表示します。将来の株価を保証するものではありません。</p>
         <button class="btn btn-primary" type="button" ${fav?"disabled":""}
           onclick="addDetailFavorite('${escapeHtml(code)}','${escapeHtml(jp).replace(/'/g,"&#39;")}')">${fav?"お気に入り登録済み":"お気に入り追加"}</button>
       </div>`;
+    // Allow the browser to paint the basic evaluation immediately.
+    await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+    if(seq!==detailEvalSequence)return;
+    const progress=document.getElementById('detailForecastProgress');
+    if(progress)progress.dataset.basicMs=String(Math.round(performance.now()-started));
+    await forecastPromise;
+    if(seq!==detailEvalSequence)return;
+    const slot=document.getElementById('detailForecastProgress');
+    if(slot){slot.outerHTML=intradayOutlookHtml(q);}
+    console.info('[detail-performance]',{code,basicMs:Math.round(performance.now()-started),cachedQuote:fresh,forecast:'complete'});
   } catch(e) { result.innerHTML=`<p class="muted">詳細評価を取得できませんでした：${escapeHtml(e.message)}</p>`; }
 }
 function addDetailFavorite(code,name) {
@@ -2800,11 +2825,21 @@ async function fetchQuote(code) {
   let equityRatio = null;
   let industry = RECOMMENDED_INDUSTRIES[codeOnly] || null;
 
+  // v51: Independent remote requests start together instead of serially.
+  const enrichmentUrls={
+    summary:`${API_BASE}/api/quoteSummary?symbol=${encodeURIComponent(symbol)}`,
+    market:`${API_BASE}/api/marketSnapshot?symbol=${encodeURIComponent(symbol)}`,
+    fundamentals:`${API_BASE}/api/fundamentals?symbol=${encodeURIComponent(symbol)}`
+  };
+  const enrichment={};
+  await Promise.allSettled(Object.entries(enrichmentUrls).map(async ([key,url])=>{
+    const response=await fetch(url);
+    if(response.ok)enrichment[key]=await response.json();
+  }));
   // 目標株価・推奨だけは従来APIを維持（財務4指標とは完全分離）。
   try {
-    const r2 = await fetch(`${API_BASE}/api/quoteSummary?symbol=${encodeURIComponent(symbol)}`);
-    if (r2.ok) {
-      const d2 = await r2.json();
+    if (enrichment.summary) {
+      const d2 = enrichment.summary;
       const summary = d2.quoteSummary?.result?.[0] || {};
       const fd = summary.financialData || {};
       const profile = summary.assetProfile || {};
@@ -2824,9 +2859,8 @@ async function fetchQuote(code) {
 
   // v36.8: PER・目標株価・前日比%は財務実績と分離した市場データ経路でも補完。
   try {
-    const rm = await fetch(`${API_BASE}/api/marketSnapshot?symbol=${encodeURIComponent(symbol)}`);
-    if (rm.ok) {
-      const mm = await rm.json();
+    if (enrichment.market) {
+      const mm = enrichment.market;
       const n = value => {
         const x = Number(value?.raw ?? value);
         return Number.isFinite(x) ? x : null;
@@ -2842,9 +2876,8 @@ async function fetchQuote(code) {
   // ROE・売上成長率・自己資本比率はEDINET XBRLから取得。
   // PERだけは現在株価を必要とする市場指標なので従来の市場データを使用する。
   try {
-    const rf = await fetch(`${API_BASE}/api/fundamentals?symbol=${encodeURIComponent(symbol)}`);
-    if (rf.ok) {
-      const fm = await rf.json();
+    if (enrichment.fundamentals) {
+      const fm = enrichment.fundamentals;
       const num = value => {
         if (value == null || value === "" || value === "—" || value === "-") return null;
         const x = Number(value);
