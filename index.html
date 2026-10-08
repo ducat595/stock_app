@@ -1405,11 +1405,13 @@ fieldset{color:#334155;}
           <li><b>9時の予想：</b>前営業日の終値に、過去の寄り付きギャップと直近の値動きから推定した予想変動率を反映します。前日終値をそのまま予想値とする方式ではありません。</li>
           <li><b>当日15:30より前：</b>当日の時間帯別予想を表示します。経過済みの時間帯では、予想価格・実績価格・誤差（実績－予想）を比較します。</li>
           <li><b>当日初めて評価した銘柄：</b>過去の時間帯について、当該予測時点までのデータに限定した「過去データ再現予測」を表示します。実際にその時刻に保存された予測ではありません。</li>
-          <li><b>大引け以降：</b>翌取引日（暫定的に土日を除く次の平日）の5時間帯の予想を表示します。祝日・東証休場日は未対応です。</li>
+          <li><b>大引け以降：</b>当日の5時間帯の予想・実績・誤差を表示した上で、翌取引日（暫定的に土日を除く次の平日）の5時間帯の予想も併記します。祝日・東証休場日は未対応です。</li>
           <li><b>大引け急変リスク：</b>過去の大引け近辺の変動を参考に表示します。板寄せの注文情報は取得しておらず、デモ板情報は予測に使いません。</li>
           <li><b>予測の精度：</b>予想と実績の差を確認できますが、過去データ再現予測はリアルタイム保存予測と区別してください。将来の株価や確率の精度を保証しません。</li>
           <li><b>データ不足：</b>必要な株価データが取得できない場合、予想・実績の一部が「—」になります。配信遅延により確定値の反映が遅れる場合があります。</li>
         </ul>
+        <h3>2-2. 大引け予想のデータ蓄積ステータス</h3>
+        <p>大引け予想欄に「蓄積あり」（過去サンプル10件以上）、「蓄積中」（5～9件）、「データ蓄積不足」（0～4件）を表示します。これは過去の大引け急変サンプル数の目安で、精度保証ではありません。データが少なくても、取得できた株価・直近の値動き・既存の参考変動幅を用いて暫定予測を表示します。データ不足の場合は予測の不確実性が高くなります。</p>
         <h3>3. 一括チェック</h3>
         <ul>
           <li>「最新データを取得して一括チェック」を押すと、お気に入りの現在値、PTS株価、目標株価、株価水準（割安/妥当/割高）、前日比、陽線/陰線、スコアを取得します。</li>
@@ -3160,6 +3162,22 @@ async function attachIntradayOutlook(q){
 }
 function fmtCtx(v,d=1,s=""){v=Number(v);return Number.isFinite(v)?v.toFixed(d)+s:"—"}
 function yen0(v){v=Number(v);return Number.isFinite(v)?Math.round(v).toLocaleString('ja-JP'):"—"}
+function completedSessionHtml(model){
+ const session=model?.completedSession;
+ if(!session?.timeSlots?.length)return '';
+ const labels=['寄り付き','10時','昼','14時','大引け'];
+ const cards=labels.map(label=>{
+   const x=session.timeSlots.find(item=>item.label===label);
+   if(!x)return `<div class="intraday-slot"><span>${escapeHtml(label)}</span><strong>データなし</strong></div>`;
+   const hasForecast=x.forecastPrice!=null&&Number.isFinite(Number(x.forecastPrice));
+   const hasActual=x.actualPrice!=null&&Number.isFinite(Number(x.actualPrice));
+   const diff=hasForecast&&hasActual?Number(x.actualPrice)-Number(x.forecastPrice):null;
+   const diffText=diff==null?'—':`${diff>=0?'+':''}${yenText(diff,2)}`;
+   const note=hasForecast?'過去データ再現予測（当時保存した予測ではありません）':'予測に必要な過去データ不足';
+   return `<div class="intraday-slot"><span>${escapeHtml(label)}（${escapeHtml(x.time||'')}）</span><strong>実績 ${hasActual?yenText(x.actualPrice,2):'未取得'}</strong><small>予想：${hasForecast?yenText(x.forecastPrice,2):'—'} ／ 実績：${hasActual?yenText(x.actualPrice,2):'—'} ／ 誤差（実績−予想）：${diffText}<br>${note}</small></div>`;
+ }).join('');
+ return `<div class="intraday-outlook"><div class="intraday-title"><span>当日（${escapeHtml(session.date||'')}）の予想・実績比較</span><strong>取引結果</strong></div><div class="intraday-slots">${cards}</div><div class="intraday-caution">※当日初めて評価した場合の予想は、各予測時点までの情報を使った過去データ再現予測です。実際に当時保存した予想ではありません。株価データの更新遅延により大引けの実績が未取得の場合があります。</div></div>`;
+}
 function intradayOutlookHtml(q){
  const model=q?.intradayOutlook,slots=model?.slots||[["寄り付き",50],["10時",50],["昼",50],["14時",50],["大引け",50]],validSlots=slots.filter(x=>x[1]!=null&&Number.isFinite(Number(x[1]))),overall=validSlots.length?Math.round(validSlots.reduce((a,x)=>a+Number(x[1]),0)/validSlots.length):50;
  const timeSlots=model?.timeSlots||[];
@@ -3182,9 +3200,12 @@ function intradayOutlookHtml(q){
  const factors=`RSI ${fmtCtx(t.rsi)} / MA5 ${fmtCtx(t.ma5)} / MA25 ${fmtCtx(t.ma25)} / MACD ${fmtCtx(t.macdHist,2)} / 出来高倍率 ${fmtCtx(mc.volumeRatio,2,"倍")} / 寄り付き価格 ${fmtCtx(mc.open,1,"円")} / PBR ${fmtCtx(st.pbr,2,"倍")} / 信用買残 ${fmtCtx(st.marginBuy,0)} / 信用売残 ${fmtCtx(st.marginSell,0)} / 信用倍率 ${fmtCtx(st.marginRatio,2,"倍")} / 日経 ${fmtCtx(mc.nikkei?.changePct,2,"%")} / TOPIX ${fmtCtx(mc.topix?.changePct,2,"%")} / NYダウ ${fmtCtx(mc.dow?.changePct,2,"%")} / S&P500 ${fmtCtx(mc.sp500?.changePct,2,"%")} / NASDAQ ${fmtCtx(mc.nasdaq?.changePct,2,"%")} / USDJPY ${fmtCtx(mc.usdJpy?.changePct,2,"%")} / 決算材料 ${fmtCtx(Number(mat.earnings)*100,0)} / ニュース材料 ${fmtCtx(Number(mat.news)*100,0)}`;
  const sourceNote=model?.source?.startsWith("server-v")?"":"<br>※予測APIを取得できなかったため中立表示です。";
  const risk=model?.auctionRisk||{},validation=model?.forecastValidation||{};
+ const readiness=model?.closingReadiness||{};
+ const readyLabel=readiness.label||((risk.samples||0)>=10?'蓄積あり':((risk.samples||0)>=5?'蓄積中':'データ蓄積不足'));
+ const readyNote=`<br><strong>🎯 大引け予想データ状況：</strong><span style="display:inline-block;padding:2px 8px;border-radius:10px;background:${readyLabel==='蓄積あり'?'#dcfce7':readyLabel==='蓄積中'?'#fef3c7':'#fee2e2'};color:#1f2937;font-weight:700">${escapeHtml(readyLabel)}</span> ／ 過去サンプル ${Number(readiness.samples??risk.samples??0)}件（目安 ${Number(readiness.targetSamples||10)}件）。${escapeHtml(readiness.message||'履歴が不足していても取得済みの株価・直近の値動きから暫定予測を表示します。')}<br>※データ蓄積状況は過去の大引け急変サンプル数に基づき、予測精度を保証するものではありません。`;
  const riskNote=`<br><strong>大引け急変リスク：</strong>${risk.status==='historical'?'過去統計あり':'参考値（過去データ不足）'} ／ 急変幅の参考値 ${fmtCtx(risk.riskPct,2,'%')} ／ 過去サンプル ${Number(risk.samples||0)}件。板情報は予測に未使用。`;
  const verifyNote=`<br><strong>予測精度検証：</strong>${validation.evaluatedCount?`検証 ${validation.evaluatedCount}件、予測MAE ${fmtCtx(validation.mae,2,'円')}、現在値基準MAE ${fmtCtx(validation.baselineMae,2,'円')}`:'予測後の実績待ち（まだ検証記録なし）'}。記録はRender一時保存で再起動時に消失する場合があります。`;
- return `<div class="intraday-outlook"><div class="intraday-title"><span>${model?.forecastSession==='next'?'翌取引日（予定：'+escapeHtml(model.forecastDate||'')+'）の動向見通し':'今日の動向見通し'}</span><strong class="${cls}">${text}</strong></div><div class="intraday-slots">${slots.map(x=>line(x[0],x[1])).join("")}</div><div class="intraday-caution">${factors}${sourceNote}${riskNote}${verifyNote}<br>※過去の時間帯は当時までの5分足だけを使う再現予測と実績を比較します。これは当時実際に保存した予測ではありません。9時の予想は前日終値と過去の寄り付きギャップから算出します。翌取引日の日付は土日だけを除いた暫定表示で、祝日・休場日は未反映です。将来の予想額は未校正の参考値です。<br>総合モデル：5分足・出来高・寄り付き・RSI・移動平均・MACD・信用需給・PBR・国内/米国市場・決算・ニュースを利用。予測計算はサーバー側で実行しています。表示確率と大引け予想価格はモデル推定値で、将来の値動きを保証しません。</div>${closingForecastDetailHtml(q,model)}${demoOrderbookHtml(q)}</div>`;
+ return `${completedSessionHtml(model)}<div class="intraday-outlook"><div class="intraday-title"><span>${model?.forecastSession==='next'?'翌取引日（予定：'+escapeHtml(model.forecastDate||'')+'）の動向見通し':'今日の動向見通し'}</span><strong class="${cls}">${text}</strong></div><div class="intraday-slots">${slots.map(x=>line(x[0],x[1])).join("")}</div><div class="intraday-caution">${factors}${sourceNote}${readyNote}${riskNote}${verifyNote}<br>※過去の時間帯は当時までの5分足だけを使う再現予測と実績を比較します。これは当時実際に保存した予測ではありません。9時の予想は前日終値と過去の寄り付きギャップから算出します。翌取引日の日付は土日だけを除いた暫定表示で、祝日・休場日は未反映です。将来の予想額は未校正の参考値です。<br>総合モデル：5分足・出来高・寄り付き・RSI・移動平均・MACD・信用需給・PBR・国内/米国市場・決算・ニュースを利用。予測計算はサーバー側で実行しています。表示確率と大引け予想価格はモデル推定値で、将来の値動きを保証しません。</div>${closingForecastDetailHtml(q,model)}${demoOrderbookHtml(q)}</div>`;
 }
 async function loadDemoOrderbook(symbol, elementId){
  const target=document.getElementById(elementId);if(!target)return;
