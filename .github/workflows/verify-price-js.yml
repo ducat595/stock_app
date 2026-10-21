@@ -1,0 +1,36 @@
+name: Verify price display JavaScript
+on:
+  push:
+    branches: [fix-daily-close-consistency-20261021]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate inline JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class JSExtractor(HTMLParser):
+              def __init__(self):
+                  super().__init__();self.active=False;self.chunks=[];self.blocks=[]
+              def handle_starttag(self,t,attrs):
+                  if t=='script':
+                      self.active=not dict(attrs).get('src')
+                      self.chunks=[]
+              def handle_data(self,data):
+                  if self.active:self.chunks.append(data)
+              def handle_endtag(self,t):
+                  if t=='script' and self.active:
+                      self.blocks.append(''.join(self.chunks));self.active=False
+          p=JSExtractor();p.feed(Path('index.html').read_text())
+          for i,b in enumerate(p.blocks):
+              Path('/tmp/inline'+str(i)+'.js').write_text(b)
+          print('inline scripts',len(p.blocks))
+          PY
+          for file in /tmp/inline*.js; do node --check "$file"; done
+          node --check signals_panel.js
