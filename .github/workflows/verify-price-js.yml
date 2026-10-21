@@ -20,7 +20,7 @@ jobs:
                   super().__init__();self.active=False;self.chunks=[];self.blocks=[]
               def handle_starttag(self,t,attrs):
                   if t=='script':
-                      self.active=not dict(attrs).get('src')
+                      self.active=(not dict(attrs).get('src') and dict(attrs).get('type','text/javascript') in ('text/javascript','module',''))
                       self.chunks=[]
               def handle_data(self,data):
                   if self.active:self.chunks.append(data)
