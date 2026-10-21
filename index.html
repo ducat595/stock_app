@@ -2485,7 +2485,7 @@ async function evaluateDetailStock(code) {
     .then(r=>r.ok?r.json():null).catch(()=>null);
   try {
     const cached=detailQuoteCache.get(code);
-    const fresh=cached && Date.now()-cached.at<15000 && cached.data?.priceSource==='intraday-1m' ;
+    const fresh=cached && Date.now()-cached.at<15000 && ['intraday-1m','daily-close'].includes(cached.data?.priceSource);
     const q=fresh ? {...cached.data} : await fetchQuote(code);
     if(!fresh)detailQuoteCache.set(code,{at:Date.now(),data:{...q}});
     if(seq!==detailEvalSequence)return;
@@ -2513,7 +2513,10 @@ async function evaluateDetailStock(code) {
     const range=detailShortRange(q);
     const price=q.price==null ? "—" : `${Number(q.price).toLocaleString("ja-JP",{maximumFractionDigits:1})}円`;
     const priceDateText=q.asOf ? new Date(q.asOf*1000).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '時刻不明';
-    const priceStatusText=q.priceSource==='intraday-1m' ? '1分足・直近約定値（配信遅延の可能性あり）' : '日足の参考値（リアルタイムではありません）';
+    const priceStatusText=q.priceSource==='intraday-1m' ? '1分足・直近取引値（配信遅延の可能性あり）' : (q.priceSource==='daily-close' ? '当該取引日の日足終値（Yahoo配信、取引所の公式確報ではありません）' : '日足の参考値（リアルタイムではありません）');
+    const closeLabel=q.dailyClosePrice!=null ? (q.dailyCloseDate===new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())?'今日の終値':'直近取引日の終値') : '終値（未確定）';
+    const timeLabel=unix=>unix?new Date(unix*1000).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'時刻不明';
+    const lastTradeText=q.minuteTradePrice==null?'取得できませんでした':Number(q.minuteTradePrice).toLocaleString('ja-JP',{maximumFractionDigits:2})+'円';
     const targetPrice=q.target==null ? "—" : `${Number(q.target).toLocaleString("ja-JP",{maximumFractionDigits:1})}円`;
     const targetGap=(q.target!=null && q.price!=null && Number(q.price)>0) ? (Number(q.target)/Number(q.price)-1)*100 : null;
     const targetGapText=targetGap==null ? "—" : `${targetGap>=0?"+":""}${targetGap.toFixed(1)}%`;
@@ -2529,14 +2532,16 @@ async function evaluateDetailStock(code) {
         </h3>
         <div class="detail-industry"><b>業種：</b>${escapeHtml(q.industry || "—")}</div>
         <div class="ux-quick-summary" aria-label="評価の要約">
-          <div><small>${q.priceSource==='intraday-1m'?'直近約定値':'参考株価（日足）'}</small><strong>${price}</strong></div>
+          <div><small>${q.priceSource==='intraday-1m'?'直近取引値（1分足）':(q.priceSource==='daily-close'?'日足終値':'参考株価（日足）')}</small><strong>${price}</strong></div>
           <div><small>短期評価</small><strong>${escapeHtml(short.view)}</strong></div>
           <div><small>長期評価</small><strong>${escapeHtml(long.view)}</strong></div>
         </div>
         <p class="ux-caption">まず評価の要約を確認し、詳しい根拠は下の「分析根拠・目標株価・参考レンジを表示」から確認できます。</p>
         <details class="ux-detail-expand"><summary>分析根拠・目標株価・参考レンジを表示</summary>
         <div class="detail-price-summary">
-          <div><span>${q.priceSource==='intraday-1m'?'直近約定値':'参考株価（日足）'}</span><strong>${q.price != null ? `${price}` : price}</strong><small>${escapeHtml(priceStatusText)}／${escapeHtml(priceDateText)}</small></div>
+          <div><span>${q.priceSource==='intraday-1m'?'直近取引値（1分足）':(q.priceSource==='daily-close'?'日足終値':'参考株価（日足）')}</span><strong>${q.price != null ? `${price}` : price}</strong><small>${escapeHtml(priceStatusText)}／${escapeHtml(priceDateText)}</small></div>
+          <div><span>${escapeHtml(closeLabel)}</span><strong>${q.dailyClosePrice==null?'—':Number(q.dailyClosePrice).toLocaleString('ja-JP',{maximumFractionDigits:2})+'円'}</strong><small>${escapeHtml(timeLabel(q.dailyCloseAt))}</small></div>
+          <div><span>1分足の最終取引値</span><strong>${escapeHtml(lastTradeText)}</strong><small>${escapeHtml(timeLabel(q.minuteTradeAt))}・終値と一致しない場合があります</small></div>
           <div><span>目標株価</span><strong>${q.target != null ? `${targetPrice}` : targetPrice}</strong></div>
           <div><span>目標株価との差</span><strong class="${targetGap==null?"":targetGap>=0?"price-positive":"price-negative"}">${targetGapText}</strong></div>
         </div>
@@ -2875,9 +2880,13 @@ async function fetchQuote(code) {
   // Daily chart can lag intraday trades. Prefer timestamped 1-minute trades,
   // but never present yesterday's close as a live/current quote.
   const dailyPrice = Number(meta.regularMarketPrice ?? closes[n-1]);
+  const dailyClosesTs=result.timestamp||[];
+  const latestBarTs=Number(dailyClosesTs[dailyClosesTs.length-1]);
   let price = Number.isFinite(dailyPrice) && dailyPrice > 0 ? dailyPrice : null;
   let priceTimestamp = Number(meta.regularMarketTime) || null;
   let priceSource = 'daily';
+  let minuteTradePrice=null,minuteTradeAt=null;
+  let dailyClosePrice=null,dailyCloseAt=null,dailyCloseDate=null;
   const todayJst = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'});
   const jstDate = unix => todayJst.format(new Date(unix*1000));
   const currentJstDay = todayJst.format(new Date());
@@ -2892,11 +2901,25 @@ async function fetchQuote(code) {
       for(let i=Math.min(ts.length,liveCloses.length)-1;i>=0;i--){
         const candidate=Number(liveCloses[i]);
         if(isToday(Number(ts[i])) && Number.isFinite(candidate) && candidate>0){
+          minuteTradePrice=candidate;minuteTradeAt=Number(ts[i]);
           price=candidate;priceTimestamp=Number(ts[i]);priceSource='intraday-1m';break;
         }
       }
     }
   }catch(e){console.warn('1分足株価の取得に失敗:',e?.message||e);}
+  // Prefer the finalized daily bar after its own session, but only if the
+  // Yahoo last-market timestamp and the bar identify the SAME JST date.
+  // One-minute bars can omit the 15:30 closing auction transaction.
+  const latestBarClose=Number(closes[n-1]);
+  const officialMarketTs=Number(meta.regularMarketTime);
+  const timestampDateMatch=Number.isFinite(latestBarTs)&&Number.isFinite(officialMarketTs)&&
+    jstDate(latestBarTs)===jstDate(officialMarketTs);
+  const marketClock=timestampDateMatch?new Date(officialMarketTs*1000).toLocaleTimeString('en-GB',
+    {timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',hour12:false}):'';
+  if(timestampDateMatch && marketClock>='15:30' && Number.isFinite(latestBarClose) && latestBarClose>0){
+    dailyClosePrice=latestBarClose;dailyCloseAt=officialMarketTs;dailyCloseDate=jstDate(latestBarTs);
+    price=latestBarClose;priceTimestamp=officialMarketTs;priceSource='daily-close';
+  }
   // A dated daily bar is not an intraday trade; label it accordingly.
   if(priceSource==='daily'){
     const dailyTs=result.timestamp||[];
@@ -3080,6 +3103,7 @@ async function fetchQuote(code) {
     roe, equityRatio,
     growthRate, growthType, industry,
     asOf: priceTimestamp, priceSource,
+    dailyClosePrice,dailyCloseAt,dailyCloseDate,minuteTradePrice,minuteTradeAt,
     currency: meta.currency || "JPY",
   };
 }
