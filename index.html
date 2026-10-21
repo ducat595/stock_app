@@ -196,7 +196,7 @@
       }
       .benefit-table td:last-child { border-bottom:0 !important; padding-bottom:0 !important; }
       .benefit-table td::before { font-weight:700; color:#475569; font-size:.86rem; }
-      .benefit-table td:nth-child(1)::before { content:"利権確定日"; }
+      .benefit-table td:nth-child(1)::before { content:"権利確定日"; }
       .benefit-table td:nth-child(2)::before { content:"会社コード"; }
       .benefit-table td:nth-child(3)::before { content:"会社名"; }
       .benefit-table td:nth-child(4)::before { content:"現在株価"; }
@@ -607,7 +607,7 @@
 }
 .benefit-table td:last-child { border-bottom:0 !important; }
 .benefit-table td::before { font-weight:700 !important; color:#64748b !important; font-size:.82rem !important; }
-.benefit-table td:nth-child(1)::before { content:"利権確定日" !important; }
+.benefit-table td:nth-child(1)::before { content:"権利確定日" !important; }
 .benefit-table td:nth-child(2)::before { content:"会社コード" !important; }
 .benefit-table td:nth-child(3)::before { content:"会社名" !important; }
 .benefit-table td:nth-child(4)::before { content:"現在株価" !important; }
@@ -1095,6 +1095,34 @@ fieldset{color:#334155;}
  .dividend-count-link{font-size:1.08rem}
 }
 
+
+
+/* v57 UX: hierarchy, navigation, progress, disclosure, consistent card actions */
+:root{--ux-accent:#1765cc;--ux-border:#dce4ef;--ux-soft:#f4f8ff}
+.nav{grid-template-columns:repeat(auto-fit,minmax(142px,1fr));gap:8px}
+.nav a{min-height:48px;padding:9px 12px;border-radius:10px}
+.nav a:focus-visible,.btn:focus-visible,summary:focus-visible{outline:3px solid #ffb347;outline-offset:2px}
+#page-detail>.card,#page-dividends>.card,#page-benefits>.card{max-width:100%}
+.ux-status{border:1px solid var(--ux-border);background:var(--ux-soft);border-radius:10px;padding:11px 14px;margin:14px 0;color:#26405d;font-size:.92rem}
+.ux-status[data-state="loading"],.ux-status[data-state="partial"]{border-left:4px solid #1765cc}
+.ux-status[data-state="ready"]{border-left:4px solid #237a53;background:#f1fbf6}
+.ux-status[data-state="error"]{border-left:4px solid #b42318;background:#fff4f3}
+.ux-quick-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0 8px}
+.ux-quick-summary>div{border:1px solid var(--ux-border);border-radius:12px;padding:14px;background:var(--ux-soft);min-width:0}
+.ux-quick-summary small{display:block;color:#52637a;font-size:.8rem;margin-bottom:6px}
+.ux-quick-summary strong{display:block;font-size:1.2rem;overflow-wrap:anywhere}
+.ux-caption{font-size:.84rem;color:#56687b}
+.ux-detail-expand{border:1px solid var(--ux-border);border-radius:12px;padding:12px 14px;margin:14px 0;background:#fff}
+.ux-detail-expand summary{cursor:pointer;font-weight:700;color:#175aab;padding:3px 0}
+.ux-detail-expand[open] summary{margin-bottom:14px}
+.ux-skeleton{display:grid;gap:12px;padding:14px 0}
+.ux-skeleton div{height:54px;border-radius:10px;background:linear-gradient(90deg,#e9eef5 20%,#f8faff 45%,#e9eef5 70%);background-size:200% 100%;animation:ux-shimmer 1.5s linear infinite}
+.ux-skeleton div:nth-child(2){width:80%}.ux-skeleton div:nth-child(3){width:65%}
+@keyframes ux-shimmer{to{background-position-x:-200%}}
+.dividend-card-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.dividend-card-actions .btn{min-height:40px}
+@media(max-width:700px){.nav{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;gap:8px}.nav a{flex:0 0 auto;min-height:44px;scroll-snap-align:start;white-space:nowrap}.ux-quick-summary{grid-template-columns:1fr 1fr}.ux-quick-summary>div:first-child{grid-column:span 2}.dividend-card-actions .btn{flex:1 1 145px}}
+@media(prefers-reduced-motion:reduce){.ux-skeleton div{animation:none}}
 </style>
 </head>
 <body>
@@ -1108,14 +1136,14 @@ fieldset{color:#334155;}
   <div class="dividend-month-summary" aria-label="今月の配当権利確定銘柄">
     <div class="dividend-month-summary-inner">
       <div>
-        <div class="dividend-month-summary-title">💰 今月の配当利権確定銘柄件数 <a id="currentDividendCount" class="dividend-month-summary-count dividend-count-link" href="#page-dividends" onclick="openCurrentDividendList();return false;" aria-label="今月の該当銘柄を表示">取得中…</a></div>
+        <div class="dividend-month-summary-title">💰 今月の配当権利確定銘柄件数 <a id="currentDividendCount" class="dividend-month-summary-count dividend-count-link" href="#page-dividends" onclick="openCurrentDividendList();return false;" aria-label="今月の該当銘柄を表示">取得中…</a></div>
         <div id="currentDividendCountNote" class="dividend-month-summary-note">件数をクリックすると、今月の該当銘柄を表示します。</div>
       </div>
     </div>
   </div>
-  <div class="nav">
+  <nav class="nav" aria-label="主な機能">
     <a href="#page-home" data-page="home" class="active">🏠 ホーム</a>
-    <a href="#page-detail" data-page="detail" class="">🔎 株銘柄詳細評価</a>
+    <a href="#page-detail" data-page="detail" class="">🔎 詳細評価</a>
     <a href="#page-fav" data-page="fav" class="">★ お気に入り</a>
     <a href="#page-check" data-page="check" class="">📋 一括チェック</a>
     <a href="#page-fx" data-page="fx" class="">💱 為替情報</a>
@@ -1125,7 +1153,7 @@ fieldset{color:#334155;}
     <a href="#page-dividends" data-page="dividends" class="">💰 配当検索</a>
     <a href="#page-evaluation" data-page="evaluation" class="">📊 株価の評価方法</a>
     <a href="#page-help" data-page="help" class="">❓ヘルプ</a>
-  </div>
+  </nav>
   <div class="container">
     <div id="msg" class="msg"></div>
 
@@ -1196,6 +1224,7 @@ fieldset{color:#334155;}
           <button class="btn btn-primary" type="button" onclick="searchDetailStocks()">検索</button>
         </div>
         <div id="detailSearchResults" style="margin-top:12px"></div>
+        <div id="detailEvaluationStatus" class="ux-status" role="status" aria-live="polite">銘柄を検索して「詳細評価」を選択してください。</div>
         <div id="detailEvaluationResult" style="margin-top:16px"></div>
       </div>
     </div>
@@ -1282,9 +1311,9 @@ fieldset{color:#334155;}
     <div id="page-benefits" class="page">
       <div class="card">
         <h2>🎁 株主優待リスト</h2>
-        <p class="muted">確認したい利権確定月を選び、「リスト表示」を押してください。</p>
+        <p class="muted">確認したい権利確定月を選び、「リスト表示」を押してください。</p>
         <div class="form-row">
-          <label for="benefitMonth"><b>利権確定月</b></label>
+          <label for="benefitMonth"><b>権利確定月</b></label>
           <select id="benefitMonth" style="min-width:120px">
             <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
             <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
@@ -1300,7 +1329,7 @@ fieldset{color:#334155;}
         <div id="benefitTable"></div>
         <p class="muted" style="margin-top:12px;">
           ※表示される株主優待情報は、最新の内容に更新されていない場合があります。
-          優待制度の新設・変更・廃止、利権確定日、必要株数、継続保有条件などの最新情報は、
+          優待制度の新設・変更・廃止、権利確定日、必要株数、継続保有条件などの最新情報は、
           実際に優待の権利を取得する前に、必ず各会社の公式IR情報などでご確認ください。
         </p>
       </div>
@@ -1309,7 +1338,7 @@ fieldset{color:#334155;}
 <!-- 株価の評価方法 -->
     <div id="page-dividends" class="page">
       <div class="card">
-        <h2>💰 配当利権確定月から探す</h2>
+        <h2>💰 配当権利確定月から探す</h2>
         <p class="muted">EDINETの有価証券報告書から1株配当実績を取得し、JPXの配当落・権利落情報を確認元として扱います。取得できた銘柄から随時表示します。</p>
         <div class="dividend-search-panel">
           <div class="dividend-search-field">
@@ -1317,12 +1346,19 @@ fieldset{color:#334155;}
             <input id="dividendYear" type="number" min="2000" max="2100" inputmode="numeric">
           </div>
           <div class="dividend-search-field">
-            <label for="dividendMonth">利権確定月</label>
+            <label for="dividendMonth">権利確定月</label>
             <select id="dividendMonth"><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select>
           </div>
           <button class="btn btn-primary dividend-search-button" type="button" onclick="loadDividendList()">🔍 検索</button>
         </div>
         <div class="notice" style="margin:12px 0"><b>日付の扱い：</b>EDINETコードリストの決算日から作る日付は「配当基準日候補」です。JPX無料公開情報は公表日の2週間後までのため、未確認行は「候補」と表示します。配当額はEDINET有価証券報告書から取得した1株配当実績です。</div>
+        <section class="card" style="margin:14px 0;padding:15px;border:1px solid #d5e5f7;background:#f8fbff">
+          <h3 style="margin:0 0 8px">📅 お気に入り銘柄をGoogleカレンダーに登録</h3>
+          <p class="muted" style="margin:0 0 10px">選択中の年・月についてお気に入り銘柄を照合します。日付が確認済みの銘柄のみ登録リンクを表示します。候補日付は誤登録防止のため登録できません。</p>
+          <button type="button" class="btn btn-primary" onclick="loadFavoriteDividendCalendar()">⭐ お気に入りの配当日を検索</button>
+          <p id="favDividendCalendarStatus" class="muted" role="status" aria-live="polite"></p>
+          <div id="favDividendCalendarList"></div>
+        </section>
         <p id="dividendStatus" class="muted"></p>
         <div id="dividendTable"></div>
       </div>
@@ -1376,7 +1412,7 @@ fieldset{color:#334155;}
     <!-- ヘルプ -->
     <div id="page-help" class="page">
       <div class="card">
-        <h2>❓ 使い方</h2>
+        <h2>❓ 使い方</h2><p>v57では詳細評価の要約表示・分析根拠の折りたたみ・処理状況の表示・小画面でのメニュー操作を改善しました。予測・履歴保存・カレンダー登録の仕組みは従来どおりです。</p>
         <h3>1. お気に入り</h3>
         <ul>
           <li>銘柄コードを入力して「コードで追加」を押すと、日本語の会社名を補って登録します。</li>
@@ -1388,7 +1424,8 @@ fieldset{color:#334155;}
           <li><b>機種変更時：</b>ブラウザー内の既定バックアップは新しい端末へ自動では移りません。旧端末で保存された最新のJSONファイルをiCloud Drive、Google Drive、AirDrop、USBなどで新端末へ移して保管してください。現在の「お気に入り復元」ボタンは同じ端末・同じブラウザー内の既定バックアップを復元する機能です。</li>
           <li><b>注意：</b>ブラウザーのサイトデータを完全に削除すると、通常のお気に入りとブラウザー内の既定バックアップの両方が消えます。端末外のJSONバックアップは機種変更・初期化に備えて残してください。</li>
         </ul>
-        <h3>2. 株銘柄詳細評価</h3>
+        <h3>2. 株銘柄詳細評価</h3><p><b>株価の表示（v60）：</b>現在値には当日の1分足データの最新約定値を優先し、取得時刻を日本時間で表示します。取得できない場合は日足の参考値と明示します。情報配信元による遅延があり、証券会社の板・約定値と完全なリアルタイム一致を保証しません。</p>
+        <p><b>v57画面：</b>検索後は「取得中 → 基本評価表示 → 予測計算中 → 完了」をステータス欄に表示します。現在株価・短期評価・長期評価の要約を先に確認できます。目標株価や評価根拠は「分析根拠・目標株価・参考レンジを表示」を開いてください。通信に失敗した場合は理由を表示します。</p>
         <ul>
           <li>「株銘柄詳細評価」では、銘柄コード・日本語名称・英語名称を入力して「検索」を押すと、東証銘柄の候補を検索できます。</li>
           <li>検索結果の「詳細評価」を押すと、銘柄コード・日本語名称・業種、現在株価、目標株価、目標株価との差、短期視点・長期視点の参考評価を表示します。</li>
@@ -1455,7 +1492,7 @@ fieldset{color:#334155;}
           <li>Windowsで <code>start_benefits_generator.bat</code> をダブルクリックします。ブラウザーでローカル生成画面が開きます。</li>
           <li>対象年度とEDINET APIキーを入力して「生成開始」を押します。APIキーは生成ツールのファイルには保存されません。</li>
           <li>処理完了後、<code>generated_benefits</code> フォルダーに年度別JSON、最新版用 <code>shareholder_benefits.json</code>、要レビューJSON、処理レポートJSONが作成されます。</li>
-          <li>要レビューJSONと処理レポートを確認し、公開候補について企業公式IRで制度継続・利権確定日・必要株数・優待内容を確認します。</li>
+          <li>要レビューJSONと処理レポートを確認し、公開候補について企業公式IRで制度継続・権利確定日・必要株数・優待内容を確認します。</li>
           <li>確認後の <code>shareholder_benefits.json</code> をGitHubの <code>stock_app/shareholder_benefits.json</code> と手動で置き換えてコミットします。GitHub Pages反映後、株主優待検索で内容を確認します。</li>
         </ol>
         <p class="muted">注意：EDINETの有価証券報告書には株主優待専用の統一項目がないため、生成ツールは本文から候補を抽出します。「記載が見つからない＝優待なし」とは判定しません。公開前の公式IR確認を必須としてください。また、処理中はPCをスリープさせず、生成画面を閉じないでください。</p>
@@ -1487,16 +1524,16 @@ fieldset{color:#334155;}
         </div>
         <p class="muted">※ 外部サイトへのリンクは新しいタブで開きます。外部サイトの表示内容・提供条件は各サービスに準じます。</p>
 
-        <h3>8. 配当検索</h3><ul><li>ヘッダー直下に今月の配当利権確定候補件数を表示し、「一覧」から今月のカード一覧を開けます。</li><li>1月～12月の月を選び、配当基準日候補をカード形式で一覧表示します。</li><li>コード・名称・利権確定日候補・EDINETから取得した1株配当実績に加え、継続保有期間、現物保有条件、信用買いの扱いを表示します。会社名をクリックすると外部の配当詳細ページを新しいタブで開きます。</li><li>配当額は最大4件ずつ並列取得し、完了した行から随時表示します。</li><li>「詳細評価」で既存の株銘柄詳細評価タブへ移動し、同じ評価処理を実行します。</li><li>JPX無料公開の配当落・権利落情報は公表日の2週間後までのため、未確認日付は「候補」と明示します。</li></ul>
-        <h3>8. 株主優待検索</h3>
+        <h3>8. 配当検索・Googleカレンダー登録</h3><ul><li>ヘッダー直下に今月の配当権利確定候補件数を表示し、「一覧」から今月のカード一覧を開けます。</li><li>1月～12月の月を選び、配当基準日候補をカード形式で一覧表示します。</li><li>コード・名称・権利確定日候補・EDINETから取得した1株配当実績に加え、継続保有期間、現物保有条件、信用買いの扱いを表示します。会社名をクリックすると外部の配当詳細ページを新しいタブで開きます。</li><li>配当額は最大4件ずつ並列取得し、完了した行から随時表示します。</li><li>「詳細評価」で既存の株銘柄詳細評価タブへ移動し、同じ評価処理を実行します。確認済みの権利確定日があるカードには「Googleカレンダーに追加」を表示します。</li><li>JPX無料公開の配当落・権利落情報は公表日の2週間後までのため、未確認日付は「候補」と明示します。</li><li><b>各検索結果カードからの登録：</b>対象年・月で配当検索を実行し、登録したい銘柄カードの「📅 Googleカレンダーに追加」を押します。Googleカレンダーの予定作成画面が別タブで開くので、銘柄名・権利確定日を確認して「保存」してください。</li><li><b>お気に入りからの登録：</b>配当検索内の「お気に入り銘柄をGoogleカレンダーに登録」で対象年・月を指定して検索し、表示された各銘柄の「Googleカレンダーで登録」を押します。自動一括登録ではありません。</li><li><b>登録できない場合：</b>「日付未確認・登録不可」は権利確定日が確認済みの正確な日付ではないことを示します。候補日・推定日を勝手に確定日として登録しません。</li><li><b>登録される予定：</b>配当権利確定日を終日予定として入力します。Googleアカウントへのログインや最終的な保存操作はGoogleカレンダー側で行います。アプリから予定を直接保存・変更・削除する機能はありません。</li><li><b>注意：</b>権利確定日と権利付き最終売買日は異なります。実際の売買期限、休場日、権利条件は企業公式IR・証券会社の案内で確認してください。</li></ul>
+        <h3>9. 株主優待検索・Googleカレンダー登録</h3>
         <ul>
-          <li>「株主優待検索」で1月から12月の利権確定月を選び「リスト表示」を押すと、対象銘柄を優待利権確定日順に表示します。</li>
+          <li>「株主優待検索」で1月から12月の権利確定月を選び「リスト表示」を押すと、対象銘柄を優待権利確定日順に表示します。</li>
           <li>PCでは表形式、スマートフォンでは読みやすい1社1カード形式で表示します。</li>
           <li>会社名は会社四季報オンライン、現在株価は株価チャートへリンクします。</li>
-          <li>右端の「お気に入り追加」から銘柄をお気に入りへ登録できます。</li>
+          <li>右端の「お気に入り追加」から銘柄をお気に入りへ登録できます。</li><li><b>Googleカレンダー登録：</b>検索結果の「Googleカレンダーに追加」を押すと、確認済みの株主優待権利確定日を終日予定として入力したGoogleカレンダーの画面が別タブで開きます。銘柄コード・企業名・優待内容・条件・公式情報URLを確認し、Googleカレンダー側で「保存」してください。</li><li>確認済みのYYYY-MM-DD形式の日付がない銘柄は「日付未確認・登録不可」となります。候補月や推定日から予定は作成しません。登録済み予定の自動更新・重複排除は行いません。</li>
           <li>優待制度は変更・廃止される場合があります。権利取得前に企業公式IRで最新条件を確認してください。</li>
         </ul>
-        <h3>9. 起動とデータ取得</h3>
+        <h3>10. 起動とデータ取得</h3>
         <ul>
           <li>GitHub Pages版では株価・PTS・全銘柄検索の取得にオンラインAPIを使います。初回やしばらく利用がなかった後は、データ表示まで1分ほどかかることがあります。</li>
           <li>ローカル版を使う場合は、同じフォルダーにある「stock_checker_start.bat」を起動し、表示されたアドレスをブラウザーで開いてください。終了するときはコンソールで Ctrl+C を押します。</li>
@@ -1993,6 +2030,7 @@ function normalizeBenefitItems(source, offset=0) {
       name:x?.name??x?.companyName??"",
       industry:x?.industry??"要確認",
       recordDate:x?.recordDate??x?.rightsDate??"要確認",
+      recordDateVerified:x?.recordDateVerified===true,
       conditions:x?.conditions??x?.condition??"要確認",
       benefit:x?.benefit??x?.benefitContent??"要確認",
       status:x?.status??"要確認",
@@ -2002,24 +2040,44 @@ function normalizeBenefitItems(source, offset=0) {
   }).filter(x=>x.code);
 }
 
+// v54: 優待権利確定日が「確認済み」で、日付が確定したYYYY-MM-DD形式の場合のみ登録可能。
+// 「3月末」「2027年3月頃」などの月次・推定表記は日付を補完しない。
+function googleBenefitCalendarUrl(item) {
+  if (item.recordDateVerified !== true) return null;
+  const start = validDividendCalendarDate(item.recordDate);
+  if (!start) return null;
+  const endDate = new Date(Date.UTC(+start.slice(0,4), +start.slice(4,6)-1, +start.slice(6,8)+1));
+  const end = endDate.toISOString().slice(0,10).replaceAll('-', '');
+  const code = String(item.code || '').replace(/\.T$/i, '');
+  const name = String(item.name || '');
+  const details = `銘柄コード: ${code}\n企業名: ${name}\n株主優待権利確定日: ${item.recordDate}（確認済み）\n優待内容: ${String(item.benefit || '要確認')}\n優待取得条件: ${String(item.conditions || '要確認')}\n公式情報: ${String(item.officialSource || '未登録')}\n※権利付き最終売買日とは異なります。企業IRで最新の権利条件・日付を確認してください。`;
+  const url = new URL('https://calendar.google.com/calendar/render');
+  url.searchParams.set('action', 'TEMPLATE');
+  url.searchParams.set('text', `【株主優待権利確定日】${code} ${name}`);
+  url.searchParams.set('dates', start + '/' + end);
+  url.searchParams.set('details', details);
+  return url.toString();
+}
+
 function renderBenefitRows(rows, priceMap, token) {
   if (token !== benefitLoadToken) return;
   const box = document.getElementById("benefitTable");
   const favCodes=new Set(loadFavs().map(x=>String(x.code).replace(/\.T$/i,"").toUpperCase()));
   box.innerHTML=`<div class="benefit-table-wrap"><table class="benefit-table"><thead><tr>
-    <th>優待利権確定日</th><th>会社コード</th><th>日本語会社名</th><th>現在株価</th>
-    <th>業種</th><th>優待権利条件</th><th>優待内容</th><th>優待状況</th><th>情報元</th><th>お気に入り</th>
+    <th>優待権利確定日</th><th>会社コード</th><th>日本語会社名</th><th>現在株価</th>
+    <th>業種</th><th>優待権利条件</th><th>優待内容</th><th>優待状況</th><th>情報元</th><th>お気に入り</th><th>Googleカレンダー</th>
     </tr></thead><tbody>${rows.map(x=>{
       const code=String(x.code).replace(/\.T$/i,"");
       const name=x.name || jpName(code) || code;
       const currentPrice=priceMap.get(code);
       const price=currentPrice==null ? "取得中…" : `${Number(currentPrice).toLocaleString("ja-JP")}円`;
       const already=favCodes.has(code.toUpperCase());
+      const calendarUrl=googleBenefitCalendarUrl(x);
       const sourceHtml=x.officialSource
         ? `<a href="${escapeHtml(String(x.officialSource))}" target="_blank" rel="noopener">公式情報</a>`
         : escapeHtml(String(x.sourceType||"要確認"));
       return `<tr>
-        <td data-label="優待利権確定日">${escapeHtml(String(x.recordDate||"要確認"))}</td>
+        <td data-label="優待権利確定日">${escapeHtml(String(x.recordDate||"要確認"))}</td>
         <td data-label="会社コード">${escapeHtml(code)}</td>
         <td data-label="日本語会社名"><a href="${benefitShikihoUrl(code)}" target="_blank" rel="noopener">${escapeHtml(name)}</a></td>
         <td data-label="現在株価" data-benefit-price-code="${escapeHtml(code)}">${currentPrice==null ? price : `<a href="${benefitChartUrl(code)}" target="_blank" rel="noopener">${price}</a>`}</td>
@@ -2029,6 +2087,7 @@ function renderBenefitRows(rows, priceMap, token) {
         <td data-label="優待状況">${escapeHtml(String(x.status||"要確認"))}</td>
         <td data-label="情報元">${sourceHtml}</td>
         <td data-label="お気に入り"><button class="btn btn-secondary btn-sm" data-benefit-fav-code="${escapeHtml(code)}" ${already?"disabled":""} onclick='addBenefitFavorite(${JSON.stringify(code)},${JSON.stringify(name)})'>${already?"登録済み":"お気に入り追加"}</button></td>
+        <td data-label="Googleカレンダー">${calendarUrl ? `<a class="btn btn-primary btn-sm" href="${escapeHtml(calendarUrl)}" target="_blank" rel="noopener noreferrer">Googleカレンダーに追加</a>` : `<span class="muted" title="権利確定日が確認済みのYYYY-MM-DD形式の場合に登録できます">日付未確認・登録不可</span>`}</td>
       </tr>`;
     }).join("")}</tbody></table></div>`;
 }
@@ -2064,7 +2123,7 @@ async function loadBenefitPricesProgressively(rows, token) {
   const concurrency=Math.min(4, rows.length);
   await Promise.all(Array.from({length:concurrency}, worker));
   if (token===benefitLoadToken) {
-    status.textContent=`${rows[0]?.month ?? ""}月：${rows.length}件を利権確定日順に表示しています。`;
+    status.textContent=`${rows[0]?.month ?? ""}月：${rows.length}件を権利確定日順に表示しています。`;
   }
 }
 
@@ -2137,6 +2196,57 @@ document.addEventListener("click", function(e) {
 }, true);
 
 
+// v53: Google Calendar テンプレートリンク。OAuthやAPIキーは不要。
+function validDividendCalendarDate(raw){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(raw||''));
+  if(!m)return null;
+  const y=+m[1],mo=+m[2],d=+m[3];
+  const dt=new Date(Date.UTC(y,mo-1,d));
+  return dt.getUTCFullYear()===y&&dt.getUTCMonth()===mo-1&&dt.getUTCDate()===d?m[1]+m[2]+m[3]:null;
+}
+function googleDividendCalendarUrl(item){
+  if(item.recordDateVerified!==true)return null;
+  const start=validDividendCalendarDate(item.recordDate);
+  if(!start)return null;
+  const date=new Date(Date.UTC(+start.slice(0,4),+start.slice(4,6)-1,+start.slice(6,8)+1));
+  const end=date.toISOString().slice(0,10).replaceAll('-','');
+  const title=`【配当権利確定日】${item.code} ${item.name||''}`;
+  const details=`銘柄コード: ${item.code}\n企業名: ${item.name||''}\n配当権利確定日: ${item.recordDate}（確認済み）\n※権利付き最終売買日とは異なります。最新の企業IR・JPX情報を確認してください。`;
+  const u=new URL('https://calendar.google.com/calendar/render');
+  u.searchParams.set('action','TEMPLATE');u.searchParams.set('text',title);
+  u.searchParams.set('dates',start+'/'+end);u.searchParams.set('details',details);
+  return u.toString();
+}
+async function loadFavoriteDividendCalendar(){
+  const status=document.getElementById('favDividendCalendarStatus');
+  const box=document.getElementById('favDividendCalendarList');
+  const year=Number(document.getElementById('dividendYear').value);
+  const month=Number(document.getElementById('dividendMonth').value);
+  if(!Number.isInteger(year)||year<2000||year>2100||!Number.isInteger(month)||month<1||month>12){status.textContent='対象年・月を確認してください。';return;}
+  const favs=loadFavs();
+  const codes=new Set(favs.map(f=>String(f.code||'').replace(/\.T$/i,'').toUpperCase()));
+  if(!codes.size){status.textContent='お気に入り銘柄がありません。';box.innerHTML='';return;}
+  const key=year+'-'+month;
+  const token=window._favDividendCalendarToken=(window._favDividendCalendarToken||0)+1;
+  status.textContent='お気に入り銘柄の権利確定日を照合しています…';box.innerHTML='';
+  try{
+    const r=await fetch(`${API_BASE}/api/dividends?year=${year}&month=${month}`);
+    if(!r.ok)throw new Error('配当情報の取得に失敗しました（HTTP '+r.status+'）');
+    const data=await r.json();
+    if(token!==window._favDividendCalendarToken||key!==Number(document.getElementById('dividendYear').value)+'-'+Number(document.getElementById('dividendMonth').value))return;
+    const items=(Array.isArray(data.items)?data.items:[]).filter(x=>codes.has(String(x.code||'').replace(/\.T$/i,'').toUpperCase()));
+    if(!items.length){status.textContent='この月に該当するお気に入り銘柄はありません。';return;}
+    let available=0;
+    box.innerHTML=items.map(x=>{
+      const url=googleDividendCalendarUrl(x);
+      if(url)available++;
+      const label=x.recordDate?String(x.recordDate).replaceAll('-','/'):'日付不明';
+      return `<div style="padding:11px 0;border-bottom:1px solid #dce5ef;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b>${escapeHtml(String(x.code||''))} ${escapeHtml(String(x.name||''))}</b><div class="muted">${escapeHtml(label)} ${url?'（確認済み）':'（候補または未確認）'}</div></div>${url?`<a class="btn btn-primary btn-sm" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Googleカレンダーで登録</a>`:'<span class="muted">登録不可（未確認日）</span>'}</div>`;
+    }).join('');
+    status.textContent=`該当 ${items.length}件／カレンダー登録可能 ${available}件。リンク先で内容を確認して「保存」してください。`;
+  }catch(e){if(token===window._favDividendCalendarToken)status.textContent=e.message||'取得に失敗しました。';}
+}
+
 // ========== 配当検索（EDINET + JPX） ==========
 let dividendLoadToken=0;
 function initDividendPage(){
@@ -2162,20 +2272,24 @@ function renderDividendRows(items,token){
     const hold=x.holdingPeriod||'原則なし（基準日時点で株主名簿に記載）';
     const method=x.acquisitionMethod||'現物保有が必要';
     const margin=x.marginBuyTreatment||'信用買いは配当そのものではなく配当金相当額の扱い';
+    const calendarUrl=googleDividendCalendarUrl(x);
+    const calendarAction=calendarUrl
+      ? `<a class="btn btn-primary btn-sm" href="${escapeHtml(calendarUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(String(x.code||''))} ${escapeHtml(String(x.name||''))}の配当権利確定日をGoogleカレンダーに追加">📅 Googleカレンダーに追加</a>`
+      : `<span class="muted" title="確認済みの権利確定日が必要です">📅 日付未確認・登録不可</span>`;
     return `<article class="dividend-stock-card">
       <div class="dividend-stock-card-head">
         <div class="dividend-stock-name"><a class="dividend-stock-name-link" href="https://minkabu.jp/stock/${encodeURIComponent(x.code)}/dividend" target="_blank" rel="noopener noreferrer" title="${escapeHtml(x.name||x.code)}の配当詳細を開く">${escapeHtml(x.name||x.code)}</a></div>
         <div class="dividend-stock-code">${escapeHtml(x.code)}</div>
       </div>
       <div class="dividend-card-fields">
-        <div class="dividend-card-field"><div class="dividend-card-label">利権確定日</div><div class="dividend-card-value">${escapeHtml(dateLabel)}</div></div>
+        <div class="dividend-card-field"><div class="dividend-card-label">権利確定日</div><div class="dividend-card-value">${escapeHtml(dateLabel)}</div></div>
         <div class="dividend-card-field"><div class="dividend-card-label">1株配当</div><div class="dividend-card-value">${escapeHtml(div)}</div></div>
         <div class="dividend-card-field"><div class="dividend-card-label">継続保有期間</div><div class="dividend-card-value">${escapeHtml(hold)}</div></div>
         <div class="dividend-card-field"><div class="dividend-card-label">利権取得方法</div><div class="dividend-card-value">${escapeHtml(method)}</div></div>
         <div class="dividend-card-field dividend-card-wide"><div class="dividend-card-label">信用買いの扱い</div><div class="dividend-card-value">${escapeHtml(margin)}</div></div>
       </div>
       <div class="dividend-condition-note">※ 配当そのものを受け取るには基準日に株主である必要があります。制度信用の信用買いは配当金相当額の処理となります。一般信用の扱いは証券会社との契約条件をご確認ください。</div>
-      <div class="dividend-card-actions"><button class="btn btn-primary btn-sm" onclick="openDividendDetail('${escapeHtml(x.code)}')">詳細評価</button></div>
+      <div class="dividend-card-actions"><button class="btn btn-primary btn-sm" onclick="openDividendDetail('${escapeHtml(x.code)}')">詳細評価</button>${calendarAction}</div>
     </article>`;
   }).join('')}</div>`;
 }
@@ -2340,6 +2454,8 @@ async function searchDetailStocks() {
   if (!raw) { box.innerHTML="<p class='muted'>銘柄コード、日本語名称、英語名称を入力してください。</p>"; return; }
   box.innerHTML="<p class='loading'>東証銘柄を検索しています...</p>";
   result.innerHTML="";
+  const uxStatus=document.getElementById("detailEvaluationStatus");
+  if(uxStatus){uxStatus.dataset.state="idle";uxStatus.textContent="検索結果から銘柄を選択してください。";}
   try {
     let matches=[];
     if (/^[0-9A-Za-z]{3,5}$/.test(raw)) {
@@ -2361,13 +2477,15 @@ async function evaluateDetailStock(code) {
   const seq=++detailEvalSequence;
   const started=performance.now();
   const result=document.getElementById("detailEvaluationResult");
-  result.innerHTML=`<p class="loading">${escapeHtml(code)} の基本情報を取得中…</p>`;
+  const uxStatus=document.getElementById("detailEvaluationStatus");
+  if(uxStatus){uxStatus.dataset.state="loading";uxStatus.textContent=`${code}：株価・基本情報を取得しています…`;}
+  result.innerHTML=`<div class="ux-skeleton" aria-hidden="true"><div></div><div></div><div></div></div>`;
   // Name lookup is independent of quote and forecast; run it in parallel.
   const namePromise=fetch(`${API_BASE}/api/search?q=${encodeURIComponent(code)}`)
     .then(r=>r.ok?r.json():null).catch(()=>null);
   try {
     const cached=detailQuoteCache.get(code);
-    const fresh=cached && Date.now()-cached.at<60000;
+    const fresh=cached && Date.now()-cached.at<15000 && cached.data?.priceSource==='intraday-1m' ;
     const q=fresh ? {...cached.data} : await fetchQuote(code);
     if(!fresh)detailQuoteCache.set(code,{at:Date.now(),data:{...q}});
     if(seq!==detailEvalSequence)return;
@@ -2394,11 +2512,14 @@ async function evaluateDetailStock(code) {
     const long=detailTrendText(q,"long");
     const range=detailShortRange(q);
     const price=q.price==null ? "—" : `${Number(q.price).toLocaleString("ja-JP",{maximumFractionDigits:1})}円`;
+    const priceDateText=q.asOf ? new Date(q.asOf*1000).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '時刻不明';
+    const priceStatusText=q.priceSource==='intraday-1m' ? '1分足・直近約定値（配信遅延の可能性あり）' : '日足の参考値（リアルタイムではありません）';
     const targetPrice=q.target==null ? "—" : `${Number(q.target).toLocaleString("ja-JP",{maximumFractionDigits:1})}円`;
     const targetGap=(q.target!=null && q.price!=null && Number(q.price)>0) ? (Number(q.target)/Number(q.price)-1)*100 : null;
     const targetGapText=targetGap==null ? "—" : `${targetGap>=0?"+":""}${targetGap.toFixed(1)}%`;
     const rangeText=range ? `${range.low.toLocaleString("ja-JP",{maximumFractionDigits:0})}円 ～ ${range.high.toLocaleString("ja-JP",{maximumFractionDigits:0})}円` : "—";
     const fav=loadFavs().some(f=>String(f.code).toUpperCase()===String(code).toUpperCase());
+    if(uxStatus){uxStatus.dataset.state="partial";uxStatus.textContent=`${code}：基本評価を表示しました。時間帯別予測を計算しています…`;}
     result.innerHTML=`
       <div class="detail-eval-card">
         <h3 class="detail-card-title">
@@ -2407,8 +2528,15 @@ async function evaluateDetailStock(code) {
           <a href="${detailShikihoUrl(code)}" target="_blank" rel="noopener">${escapeHtml(jp)}</a>
         </h3>
         <div class="detail-industry"><b>業種：</b>${escapeHtml(q.industry || "—")}</div>
+        <div class="ux-quick-summary" aria-label="評価の要約">
+          <div><small>${q.priceSource==='intraday-1m'?'直近約定値':'参考株価（日足）'}</small><strong>${price}</strong></div>
+          <div><small>短期評価</small><strong>${escapeHtml(short.view)}</strong></div>
+          <div><small>長期評価</small><strong>${escapeHtml(long.view)}</strong></div>
+        </div>
+        <p class="ux-caption">まず評価の要約を確認し、詳しい根拠は下の「分析根拠・目標株価・参考レンジを表示」から確認できます。</p>
+        <details class="ux-detail-expand"><summary>分析根拠・目標株価・参考レンジを表示</summary>
         <div class="detail-price-summary">
-          <div><span>現在株価</span><strong>${q.price != null ? `${price}` : price}</strong></div>
+          <div><span>${q.priceSource==='intraday-1m'?'直近約定値':'参考株価（日足）'}</span><strong>${q.price != null ? `${price}` : price}</strong><small>${escapeHtml(priceStatusText)}／${escapeHtml(priceDateText)}</small></div>
           <div><span>目標株価</span><strong>${q.target != null ? `${targetPrice}` : targetPrice}</strong></div>
           <div><span>目標株価との差</span><strong class="${targetGap==null?"":targetGap>=0?"price-positive":"price-negative"}">${targetGapText}</strong></div>
         </div>
@@ -2419,7 +2547,8 @@ async function evaluateDetailStock(code) {
         <div class="detail-outlook ${long.tone}"><h3>長期視点</h3><div class="detail-view">${escapeHtml(long.view)}</div>
           <p>${escapeHtml(long.text)}</p>
         </div>
-        <div id="detailForecastProgress" aria-live="polite" class="detail-outlook"><h3>時間帯別予測・大引け予測</h3><p class="loading">予測エンジンで計算中… 基本評価は先に表示しています。</p></div>
+        </details>
+        <div id="detailForecastProgress" role="status" aria-live="polite" class="detail-outlook"><h3>時間帯別予測・大引け予測</h3><p class="loading">予測エンジンで計算中… 基本評価は先に表示しています。</p></div>
         <p class="muted">※ 短期レンジは直近の値動きから計算した統計的な参考範囲で、到達を保証する予想価格ではありません。目標株価は取得できた場合のみ表示します。将来の株価を保証するものではありません。</p>
         <button class="btn btn-primary" type="button" ${fav?"disabled":""}
           onclick="addDetailFavorite('${escapeHtml(code)}','${escapeHtml(jp).replace(/'/g,"&#39;")}')">${fav?"お気に入り登録済み":"お気に入り追加"}</button>
@@ -2429,12 +2558,17 @@ async function evaluateDetailStock(code) {
     if(seq!==detailEvalSequence)return;
     const progress=document.getElementById('detailForecastProgress');
     if(progress)progress.dataset.basicMs=String(Math.round(performance.now()-started));
-    await forecastPromise;
+    const forecastResult=await forecastPromise;
     if(seq!==detailEvalSequence)return;
     const slot=document.getElementById('detailForecastProgress');
     if(slot){slot.outerHTML=intradayOutlookHtml(q);}
+    if(uxStatus){uxStatus.dataset.state=forecastResult.ok?"ready":"error";uxStatus.textContent=forecastResult.ok?`${code}：基本評価・予測の表示が完了しました（${(Math.round(performance.now()-started)/100)/10}秒）。`:`${code}：基本評価を表示しましたが、予測の取得に失敗しました。`; }
     console.info('[detail-performance]',{code,basicMs:Math.round(performance.now()-started),cachedQuote:fresh,forecast:'complete'});
-  } catch(e) { result.innerHTML=`<p class="muted">詳細評価を取得できませんでした：${escapeHtml(e.message)}</p>`; }
+  } catch(e) {
+    if(seq!==detailEvalSequence)return;
+    if(uxStatus){uxStatus.dataset.state="error";uxStatus.textContent=`${code}：取得に失敗しました。時間をおいて再度お試しください。`;}
+    result.innerHTML=`<p class="muted">詳細評価を取得できませんでした：${escapeHtml(e.message)}</p>`;
+  }
 }
 function addDetailFavorite(code,name) {
   const list=loadFavs();
@@ -2738,7 +2872,37 @@ async function fetchQuote(code) {
   const opens = quotes.open || [];
   const n = closes.length;
   const validCloses = closes.map(Number).filter(value => Number.isFinite(value) && value > 0);
-  const price = meta.regularMarketPrice ?? closes[n-1];
+  // Daily chart can lag intraday trades. Prefer timestamped 1-minute trades,
+  // but never present yesterday's close as a live/current quote.
+  const dailyPrice = Number(meta.regularMarketPrice ?? closes[n-1]);
+  let price = Number.isFinite(dailyPrice) && dailyPrice > 0 ? dailyPrice : null;
+  let priceTimestamp = Number(meta.regularMarketTime) || null;
+  let priceSource = 'daily';
+  const todayJst = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'});
+  const jstDate = unix => todayJst.format(new Date(unix*1000));
+  const currentJstDay = todayJst.format(new Date());
+  const isToday = unix => Number.isFinite(unix) && jstDate(unix) === currentJstDay;
+  try {
+    const liveRes=await fetch(`${API_BASE}/api/chart?symbol=${encodeURIComponent(symbol)}&interval=1m&range=1d&_=${Date.now()}`,{cache:'no-store'});
+    if(liveRes.ok){
+      const liveData=await liveRes.json();
+      const liveResult=liveData.chart?.result?.[0];
+      const ts=liveResult?.timestamp||[];
+      const liveCloses=liveResult?.indicators?.quote?.[0]?.close||[];
+      for(let i=Math.min(ts.length,liveCloses.length)-1;i>=0;i--){
+        const candidate=Number(liveCloses[i]);
+        if(isToday(Number(ts[i])) && Number.isFinite(candidate) && candidate>0){
+          price=candidate;priceTimestamp=Number(ts[i]);priceSource='intraday-1m';break;
+        }
+      }
+    }
+  }catch(e){console.warn('1分足株価の取得に失敗:',e?.message||e);}
+  // A dated daily bar is not an intraday trade; label it accordingly.
+  if(priceSource==='daily'){
+    const dailyTs=result.timestamp||[];
+    const latestTs=Number(dailyTs[dailyTs.length-1]);
+    if(Number.isFinite(latestTs) && latestTs>0)priceTimestamp=latestTs;
+  }
 
   // 前日比は「現在値」と同じ基準の前営業日終値を使う。
   // chartPreviousClose はチャート範囲の先頭以前の終値になる場合があり、
@@ -2915,7 +3079,7 @@ async function fetchQuote(code) {
     shortTermStrength, stability, crashRisk, crashRiskPct, recentDailyVolatility, per, perType,
     roe, equityRatio,
     growthRate, growthType, industry,
-    asOf: meta.regularMarketTime || null,
+    asOf: priceTimestamp, priceSource,
     currency: meta.currency || "JPY",
   };
 }
