@@ -1,5 +1,5 @@
-/* v61 stock-associated observations and unverified news leads. */
-window.stockSignalsHtml=function(model,esc){
+/* v62 company news, observation signals and transparent forecast adjustments. */
+window.stockSignalsHtml=function(model,esc,includeNews=true){
   if(!model || !model.featureSignals) return '';
   const sig=model.featureSignals||{}, events=model.disclosureLeads||[];
   const safe=x=>esc(String(x==null?'':x));
@@ -28,11 +28,6 @@ window.stockSignalsHtml=function(model,esc){
     ['NYダウ',num(mc.dow&&mc.dow.changePct,'%',2)],['S&P500',num(mc.sp500&&mc.sp500.changePct,'%',2)],
     ['NASDAQ',num(mc.nasdaq&&mc.nasdaq.changePct,'%',2)],['ドル円',num(mc.usdJpy&&mc.usdJpy.changePct,'%',2)]
   ]);
-  const leads=events.length?events.map(e=>{
-    const label=(e.categories||[]).length?e.categories.map(safe).join('・'):'分類外';
-    const url=typeof e.url==='string'&&e.url.startsWith('https://')?'<a href="'+safe(e.url)+'" target="_blank" rel="noopener noreferrer">記事を開く</a>':'';
-    return '<li style="padding:10px 0;border-bottom:1px solid #e2e8f0;line-height:1.6"><strong>'+safe(e.title)+'</strong><div><small>'+label+' ／ ニュース見出し・TDnet未照合'+(e.publishedAt?' ／ '+safe(e.publishedAt):'')+'</small> '+url+'</div></li>';
-  }).join(''):'<li>関連ニュースを取得できませんでした。開示が存在しないという意味ではありません。</li>';
   return '<section style="margin-top:14px;padding:15px;background:#fff;border:1px solid #d7e3ee;border-radius:13px;color:#172b45">'+
     '<h3 style="margin:0 0 8px;font-size:15px">銘柄別データ・需給指標</h3>'+
     '<p style="font-size:12px;color:#52657c;margin:0 0 10px">観測・算出値。新しい特徴量は現行の時刻別予測価格に未反映です。</p>'+
@@ -41,7 +36,24 @@ window.stockSignalsHtml=function(model,esc){
     '<details style="margin-top:12px"><summary style="font-weight:700;cursor:pointer">算出方法・利用範囲</summary>'+
     '<p style="font-size:12px">'+safe(sig.vwapMethod||'VWAP未取得')+'。'+safe(sig.volumeMethod||'')+'</p>'+
     '<p style="font-size:12px">VWAPは5分足からの近似で約定ティックVWAPではありません。板気配・業種別指数は未接続です。</p></details>'+
-    '<details open style="margin-top:12px"><summary style="font-weight:700;cursor:pointer">関連ニュース・企業材料（'+events.length+'件）</summary>'+
-    '<p style="font-size:12px;color:#80571d">ニュース見出しからの参考分類です。公式TDnet適時開示とは未照合で、株価予測への自動反映も未実装です。</p>'+
-    '<ul style="padding-left:20px;margin:0;max-height:360px;overflow:auto">'+leads+'</ul></details></section>';
+    (includeNews?window.stockNewsHtml(model.news||{status:'unavailable',items:events},esc):'')+'</section>';
+};
+
+window.stockNewsHtml=function(data,esc){
+  const safe=value=>esc(String(value==null?'':value));
+  const items=Array.isArray(data?.items)?data.items:[];
+  const state=data?.status||'unavailable';
+  const messages={loading:'ニュースを取得しています…',error:'ニュースの取得に失敗しました。時間をおいて再試行してください。',partial:'一部の取得先で失敗しました。取得できた関連ニュースを表示しています。',empty:'過去2週間の関連ニュースは見つかりませんでした。',unavailable:'ニュース機能の更新待ち、または取得状態が不明です。',ok:'銘柄コード・会社名で取得した関連ニュースです。'};
+  const effect=data?.effect;
+  const signed=(v,dp=3)=>{const n=Number(v);return v!=null&&Number.isFinite(n)?(n>0?'+':'')+n.toFixed(dp):'—';};
+  const impact=effect?`<p style="font-size:12px">判定対象 ${Number(effect.eligibleCount)||0}件 ／ ニューススコア ${safe(signed(effect.score))}（−1～+1） ／ 予想騰落率への補正 ${safe(signed(effect.adjustmentPct))}%ポイント</p>`:'';
+  const cards=items.map(item=>{
+    const validLink=typeof item.url==='string'&&/^https:\/\/[^/\s]+/i.test(item.url);
+    const published=new Date(item.publishedAt);
+    const date=Number.isNaN(published.getTime())?'日時不明':published.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'});
+    const eligibility=item.predictionEligible?'予測への反映対象（72時間以内）':item.predictionEligible===false?'表示のみ（掲載後72時間超）':'表示のみ（判定状態不明）';
+    const title=validLink?`<a href="${safe(item.url)}" target="_blank" rel="noopener noreferrer">${safe(item.title)}</a>`:safe(item.title);
+    return `<li style="padding:10px 0;border-bottom:1px solid #e2e8f0"><strong>${title}</strong><div><small>${safe(item.source)} ／ ${safe(date)}<br>${safe((item.categories||[]).join('・')||'中立・分類外')} ／ スコア ${safe(signed(item.score,2))}<br>${safe(eligibility)}</small></div></li>`;
+  }).join('');
+  return `<div class="stock-news-content"><h3 style="font-size:16px">関連ニュース・企業材料（${items.length}件）</h3><p role="status">${safe(messages[state]||messages.unavailable)}</p>${impact}<p class="muted">掲載後14日間表示し、直近72時間を判定対象にします。見出し・配信要約をルールで分類し、経過時間で減衰。将来予想への補正上限は±0.35%ポイントです。公式TDnetとの照合・精度の校正は未実施です。反映値は各予想の計算時点で確定します。</p>${data?.fetchedAt?`<p class="muted">最終取得：${safe(new Date(data.fetchedAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'}))}</p>`:''}<ul style="padding-left:20px;max-height:440px;overflow:auto">${cards||'<li>表示できる記事はありません。</li>'}</ul></div>`;
 };
