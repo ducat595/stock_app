@@ -1834,7 +1834,7 @@ function loadFavs() {
     }
     if (s) {
       const data = JSON.parse(s);
-      if (Array.isArray(data) && data.length) return data;
+      if (Array.isArray(data)) return data;
     }
   } catch(e) {
     console.warn("お気に入り読み込みエラー", e);
