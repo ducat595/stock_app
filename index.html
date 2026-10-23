@@ -1153,6 +1153,13 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
 .menu-scroll-shell:not(.has-overflow){grid-template-columns:minmax(0,1fr)}
 .menu-scroll-button[hidden],.menu-scroll-hint[hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){.menu-scroll-shell .nav{scroll-behavior:auto}}
+/* Keep the same column boundaries across all earnings date groups. */
+#earningsMonthList .earnings-date-table{width:100%;table-layout:fixed}
+#earningsMonthList .earnings-code-col{width:14%}
+#earningsMonthList .earnings-name-col{width:52%}
+#earningsMonthList .earnings-price-col{width:34%}
+#earningsMonthList .earnings-date-table th,#earningsMonthList .earnings-date-table td{overflow-wrap:anywhere;vertical-align:top}
+@media(max-width:600px){#earningsMonthList .earnings-code-col{width:20%}#earningsMonthList .earnings-name-col{width:43%}#earningsMonthList .earnings-price-col{width:37%}}
 </style>
 </head>
 <body>
@@ -4035,7 +4042,7 @@ async function loadMovers(force=false){
 renderFavList();
 </script>
 <script src="./menu_scroll.js?v=20261023-1" defer></script>
-<script src="./stock_extras.js?v=20261023-two-week-1" defer></script>
+<script src="./stock_extras.js?v=20261023-earnings-columns-1" defer></script>
 <script src="./news_client.js" defer></script>
 <script src="./signals_panel.js" defer></script>
 </body>

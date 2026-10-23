@@ -70,7 +70,7 @@
     const codes=new Set(rows.map(x=>String(x.code))),filtered=state.min!=null||state.max!=null;
     box.innerHTML=`<p>${esc(state.data.start)}～${esc(state.data.end)}：${codes.size}銘柄${filtered?'（株価条件に一致する取得済み銘柄）':''}</p>${state.data.status==='error'?'<p>予定表の取得に失敗しました。</p>':groups.size?[...groups.keys()].sort().map(day=>{
       const items=[...groups.get(day).values()].sort((a,b)=>String(a.code).localeCompare(String(b.code),'ja'));
-      return `<details data-earnings-date="${esc(day)}"${open.has(day)?' open':''} style="margin:12px 0"><summary style="cursor:pointer;padding:10px 0"><strong>${esc(day)}（${items.length}銘柄）</strong></summary><div style="overflow:auto"><table><thead><tr><th>コード</th><th>銘柄</th><th>現在株価</th></tr></thead><tbody>${items.map(x=>{
+      return `<details data-earnings-date="${esc(day)}"${open.has(day)?' open':''} style="margin:12px 0"><summary style="cursor:pointer;padding:10px 0"><strong>${esc(day)}（${items.length}銘柄）</strong></summary><div style="overflow:auto"><table class="earnings-date-table"><colgroup><col class="earnings-code-col"><col class="earnings-name-col"><col class="earnings-price-col"></colgroup><thead><tr><th>コード</th><th>銘柄</th><th>現在株価</th></tr></thead><tbody>${items.map(x=>{
         const q=state.prices.get(String(x.code));const time=q?.timestamp?new Date(q.timestamp*1000).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'}):'';
         return `<tr>${companyCells(x)}<td>${q?yen(q.price):'取得待ち'}${time?`<br><small>配信 ${esc(time)}</small>`:''}${q?.status==='error'?'<br><small>取得失敗</small>':''}</td></tr>`;
       }).join('')}</tbody></table></div></details>`;
