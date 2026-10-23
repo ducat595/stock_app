@@ -1123,6 +1123,15 @@ fieldset{color:#334155;}
 .dividend-card-actions .btn{min-height:40px}
 @media(max-width:700px){.nav{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;gap:8px}.nav a{flex:0 0 auto;min-height:44px;scroll-snap-align:start;white-space:nowrap}.ux-quick-summary{grid-template-columns:1fr 1fr}.ux-quick-summary>div:first-child{grid-column:span 2}.dividend-card-actions .btn{flex:1 1 145px}}
 @media(prefers-reduced-motion:reduce){.ux-skeleton div{animation:none}}
+.iphone-widget-only{display:none!important}
+html.iphone-device .iphone-widget-only{display:block!important}
+html.iphone-device .iphone-widget-inline{display:inline-flex!important}
+.widget-setup-steps{display:grid;gap:14px;counter-reset:widget-step;max-width:820px}
+.widget-setup-step{position:relative;padding:16px 16px 16px 58px;border:1px solid #d7e3ef;border-radius:14px;background:#fbfdff}
+.widget-setup-step::before{counter-increment:widget-step;content:counter(widget-step);position:absolute;left:16px;top:16px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#1765cc;color:#fff;font-weight:800}
+.widget-setup-step h3{margin:0 0 8px}.widget-setup-step p{margin:7px 0;line-height:1.65}
+.widget-setup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.widget-setup-actions .btn{min-height:42px}
+.widget-setup-note{margin-top:18px;padding:12px 14px;border-radius:10px;background:#fff8e8;border:1px solid #f0d99f;line-height:1.65}
 </style>
 </head>
 <body>
@@ -1153,6 +1162,7 @@ fieldset{color:#334155;}
     <a href="#page-dividends" data-page="dividends" class="">💰 配当検索</a>
     <a href="#page-evaluation" data-page="evaluation" class="">📊 株価の評価方法</a>
     <a href="#page-help" data-page="help" class="">❓ヘルプ</a>
+    <a href="#page-widget-setup" data-page="widget-setup" class="iphone-widget-only">📱 ウィジェット設定</a>
   </nav>
   <div class="container">
     <div id="msg" class="msg"></div>
@@ -1413,6 +1423,12 @@ fieldset{color:#334155;}
     <div id="page-help" class="page">
       <div class="card">
         <h2>❓ 使い方</h2><p>v57では詳細評価の要約表示・分析根拠の折りたたみ・処理状況の表示・小画面でのメニュー操作を改善しました。予測・履歴保存・カレンダー登録の仕組みは従来どおりです。</p>
+        <section class="iphone-widget-only" aria-labelledby="iphone-widget-help-title">
+          <h3 id="iphone-widget-help-title">iPhone向け：ホーム画面ウィジェット</h3>
+          <p>iPhoneでは、Scriptableを使ってお気に入り銘柄をホーム画面に表示できます。Android、Windows、Macにはこの機能の入口は表示されません。</p>
+          <p>初回のみScriptableへのスクリプト追加が必要です。同期キーやソースコードを手入力・編集する必要はありません。</p>
+          <p><a class="btn btn-primary iphone-widget-inline" href="#page-widget-setup" data-page="widget-setup">iPhoneウィジェット設定を開く</a></p>
+        </section>
         <h3>1. お気に入り</h3>
         <ul>
           <li>銘柄コードを入力して「コードで追加」を押すと、日本語の会社名を補って登録します。</li>
@@ -1558,6 +1574,37 @@ fieldset{color:#334155;}
         <p class="muted">本プログラムの利用および利用結果は、利用者個人の責任とします。本プログラムの利用に起因して利用者または第三者に損害が生じた場合、プログラム提供側は責任を負わないものとします。</p>
       </div>
     </div>
+
+    <!-- iPhone Scriptable ウィジェット設定 -->
+    <div id="page-widget-setup" class="page iphone-widget-only">
+      <div class="card">
+        <h2>📱 iPhoneウィジェット設定</h2>
+        <p>このページはiPhone専用です。お気に入り銘柄をScriptableのウィジェットに安全に同期します。</p>
+        <div class="widget-setup-steps">
+          <section class="widget-setup-step">
+            <h3>Scriptableをインストール</h3>
+            <p>App Storeから無料のScriptableをインストールします。すでに入っている場合は次へ進んでください。</p>
+            <div class="widget-setup-actions"><a class="btn btn-primary" href="https://apps.apple.com/jp/app/scriptable/id1405459188" target="_blank" rel="noopener">App StoreでScriptableを開く</a></div>
+          </section>
+          <section class="widget-setup-step">
+            <h3>ウィジェット用スクリプトを追加</h3>
+            <p>下のボタンでスクリプトを開き、共有メニューからScriptableへ渡して保存します。スクリプト名は<strong>日本株チェッカー</strong>にしてください。内容や設定値を編集する必要はありません。</p>
+            <div class="widget-setup-actions"><a class="btn btn-secondary" href="scriptable/stock.js" target="_blank" rel="noopener">スクリプトを開く</a></div>
+          </section>
+          <section class="widget-setup-step">
+            <h3>お気に入りを同期してペアリング</h3>
+            <p>保存後に実行すると、現在のお気に入りを同期してScriptableを開きます。長期利用する同期キーはURLや画面に表示されず、ScriptableのKeychainに保存されます。</p>
+            <div class="widget-setup-actions"><button type="button" class="btn btn-primary" id="widgetPairButton">お気に入りを同期してScriptableを開く</button></div>
+            <p id="widgetPairStatus" class="muted" role="status" aria-live="polite"></p>
+          </section>
+          <section class="widget-setup-step">
+            <h3>ホーム画面に追加</h3>
+            <p>ホーム画面を長押しして「＋」→「Scriptable」→中サイズのウィジェットを追加します。追加後にウィジェットを長押しして「ウィジェットを編集」を選び、スクリプトに<strong>日本株チェッカー</strong>を指定してください。</p>
+          </section>
+        </div>
+        <p class="widget-setup-note"><strong>更新について：</strong>iOSはウィジェットの更新時刻を保証しません。ウィジェットをタップするとアプリを開けます。お気に入りを変更した後は、このページの同期ボタンをもう一度押すと、すぐに同期を開始できます。</p>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -1565,6 +1612,10 @@ fieldset{color:#334155;}
 const API_BASE = ["localhost", "127.0.0.1"].includes(location.hostname)
   ? ""
   : "https://stock-app-api-ducat595.onrender.com";
+// Scriptable widgets are an iPhone-only feature. Deliberately exclude iPad,
+// Android and desktop browsers from every widget entry point.
+const IS_IPHONE = /iPhone/i.test(navigator.userAgent);
+if (IS_IPHONE) document.documentElement.classList.add("iphone-device");
 
 // Google Analytics 4 custom events. Never send free-text feedback or other personal data.
 function trackEvent(name, params = {}) {
@@ -1837,28 +1888,32 @@ async function createWidgetPairing() {
   return json.code;
 }
 
+async function startWidgetPairing() {
+  if (!IS_IPHONE) return;
+  const button = document.getElementById("widgetPairButton");
+  const status = document.getElementById("widgetPairStatus");
+  if (!button || !status) return;
+  button.disabled = true;
+  status.textContent = "お気に入りを同期しています…";
+  try {
+    await window.syncWidgetNow();
+    const code = await createWidgetPairing();
+    // Only a short-lived, single-use code is placed in the handoff URL. The
+    // long-lived token remains in this browser and is never logged or exposed.
+    const url = "https://open.scriptable.app/run/" + encodeURIComponent("日本株チェッカー") +
+      "?pair=" + encodeURIComponent(code);
+    status.textContent = "Scriptableを開いてペアリングします…";
+    const opened = window.open(url, "_blank", "noopener");
+    if (!opened) location.href = url;
+  } catch(e) {
+    status.textContent = "同期できませんでした: " + e.message + "。時間をおいて再試行してください。";
+  } finally {
+    button.disabled = false;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.textContent = "📱 ウィジェット同期";
-  button.style.cssText = "position:fixed;right:12px;bottom:76px;z-index:9999;padding:9px 12px;border-radius:10px;background:#234e80;color:white;border:1px solid #7599b5;font-size:12px";
-  button.onclick = async () => {
-    try {
-      await window.syncWidgetNow();
-      const code = await createWidgetPairing();
-      // Only a short-lived, single-use code is placed in the handoff URL. The
-      // long-lived widget token remains in this browser and is never logged or
-      // exposed in the URL.
-      const url = "https://open.scriptable.app/run/" + encodeURIComponent("日本株チェッカー") +
-        "?pair=" + encodeURIComponent(code);
-      const opened = window.open(url, "_blank", "noopener");
-      if (!opened) location.href = url;
-      alert("Scriptableを開きました。初回だけ「日本株チェッカー」スクリプトを追加してから、もう一度このボタンを押してください。同期キーのコピーや貼り付けは不要です。");
-    } catch(e) {
-      alert("同期できませんでした: " + e.message + "。Renderの設定とSupabaseのテーブルを確認してください。");
-    }
-  };
-  document.body.appendChild(button);
+  document.getElementById("widgetPairButton")?.addEventListener("click", startWidgetPairing);
 });
 
 
@@ -2404,6 +2459,10 @@ async function loadDividendList(){
 
 // ========== ナビ ==========
 function openPage(page, navItem) {
+  if (page === "widget-setup" && !IS_IPHONE) {
+    page = "home";
+    if (location.hash === "#page-widget-setup") history.replaceState(null, "", "#page-home");
+  }
   document.querySelectorAll(".nav [data-page]").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
 
@@ -2423,7 +2482,8 @@ function openPage(page, navItem) {
 }
 
 function pageFromHash() {
-  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|evaluation|help)$/);
+  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|evaluation|help|widget-setup)$/);
+  if (m && m[1] === "widget-setup" && !IS_IPHONE) return "home";
   return m ? m[1] : "home";
 }
 
