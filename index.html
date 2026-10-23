@@ -1134,6 +1134,25 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
 .widget-setup-step h3{margin:0 0 8px}.widget-setup-step p{margin:7px 0;line-height:1.65}
 .widget-setup-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.widget-setup-actions .btn{min-height:42px}
 .widget-setup-note{margin-top:18px;padding:12px 14px;border-radius:10px;background:#fff8e8;border:1px solid #f0d99f;line-height:1.65}
+
+/* A single-row menu with explicit scroll controls and visible continuation. */
+.menu-scroll-shell{max-width:1180px;margin:14px auto 0;padding:0 12px;box-sizing:border-box;display:grid;grid-template-columns:36px minmax(0,1fr) 36px;gap:6px;align-items:center}
+.menu-scroll-track{position:relative;min-width:0}
+.menu-scroll-shell .nav{display:flex;flex-wrap:nowrap;overflow-x:auto;max-width:none;margin:0;padding:5px 4px 10px;gap:8px;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:#7699c1 #e5edf5;-webkit-overflow-scrolling:touch}
+.menu-scroll-shell .nav a{flex:0 0 auto;min-height:44px;padding:10px 14px;white-space:nowrap;scroll-snap-align:start}
+.menu-scroll-shell .nav::-webkit-scrollbar{height:6px}
+.menu-scroll-shell .nav::-webkit-scrollbar-thumb{background:#7699c1;border-radius:8px}
+.menu-scroll-shell .nav::-webkit-scrollbar-track{background:#e5edf5;border-radius:8px}
+.menu-scroll-button{width:36px;height:44px;border:1px solid #b7cce2;border-radius:10px;background:#fff;color:#175aab;font-size:24px;font-weight:bold;cursor:pointer;box-shadow:0 2px 5px #153a6014}
+.menu-scroll-button:disabled{opacity:.3;cursor:default;box-shadow:none}
+.menu-scroll-track::before,.menu-scroll-track::after{content:'';position:absolute;top:0;bottom:9px;width:22px;pointer-events:none;z-index:1;opacity:0}
+.menu-scroll-track::before{left:0;background:linear-gradient(to right,#f4f7fb,transparent)}
+.menu-scroll-track::after{right:0;background:linear-gradient(to left,#f4f7fb,transparent)}
+.menu-scroll-shell.can-scroll-left .menu-scroll-track::before,.menu-scroll-shell.can-scroll-right .menu-scroll-track::after{opacity:1}
+.menu-scroll-hint{max-width:1180px;box-sizing:border-box;margin:4px auto 0;padding:0 16px;text-align:right;color:#526b87;font-size:.76rem}
+.menu-scroll-shell:not(.has-overflow){grid-template-columns:minmax(0,1fr)}
+.menu-scroll-button[hidden],.menu-scroll-hint[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){.menu-scroll-shell .nav{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -1144,19 +1163,19 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
     <p>機能のご要望や不具合、ご意見・ご感想などがございましたら、「改善要望を送る」からお気軽にお寄せください。</p>
   </div>
 
-  <div class="dividend-month-summary" aria-label="今月の配当権利確定銘柄">
-    <div class="dividend-month-summary-inner">
-      <div>
-        <div class="dividend-month-summary-title">💰 今月の配当権利確定銘柄件数 <a id="currentDividendCount" class="dividend-month-summary-count dividend-count-link" href="#page-dividends" onclick="openCurrentDividendList();return false;" aria-label="今月の該当銘柄を表示">取得中…</a></div>
-        <div id="currentDividendCountNote" class="dividend-month-summary-note">件数をクリックすると、今月の該当銘柄を表示します。</div>
-        <div class="dividend-month-summary-title">🎁 今月の優待権利確定銘柄 <a id="currentBenefitCount" class="dividend-count-link" href="#page-benefits" onclick="stockExtras.openBenefits();return false;">取得中…</a></div>
-        <div id="currentBenefitCountNote" class="dividend-month-summary-note"></div>
-        <div class="dividend-month-summary-title">📅 今月の決算発表銘柄 <a id="currentEarningsCount" class="dividend-count-link" href="#page-earnings">取得中…</a></div>
-        <div id="currentEarningsCountNote" class="dividend-month-summary-note"></div>
-      </div>
-    </div>
+  <div class="dividend-month-summary" aria-label="今日から2週間先">
+    <div class="dividend-month-summary-inner"><div>
+      <h2 style="font-size:1rem;margin:0 0 10px">今日から2週間先</h2>
+      <div class="dividend-month-summary-title">💰 配当権利確定銘柄 <a id="currentDividendCount" class="dividend-count-link" href="#page-upcoming-dividends">取得中…</a></div>
+      <div class="dividend-month-summary-title">🎁 優待権利確定銘柄 <a id="currentBenefitCount" class="dividend-count-link" href="#page-upcoming-benefits">取得中…</a></div>
+      <div class="dividend-month-summary-title">📅 決算発表銘柄 <a id="currentEarningsCount" class="dividend-count-link" href="#page-earnings">取得中…</a></div>
+      <p id="eventWindowNote" class="dividend-month-summary-note">今日から14日後までの予定を取得中です。</p>
+    </div></div>
   </div>
-  <nav class="nav" aria-label="主な機能">
+  <div class="menu-scroll-shell" id="menuScrollShell">
+    <button type="button" class="menu-scroll-button" id="menuScrollLeft" aria-label="メニューを左にスクロール" aria-controls="mainMenu" disabled>‹</button>
+    <div class="menu-scroll-track">
+  <nav class="nav" id="mainMenu" aria-label="主な機能" aria-describedby="menuScrollHint">
     <a href="#page-home" data-page="home" class="active">🏠 ホーム</a>
     <a href="#page-detail" data-page="detail" class="">🔎 詳細評価</a>
     <a href="#page-fav" data-page="fav" class="">★ お気に入り</a>
@@ -1170,6 +1189,10 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
     <a href="#page-reference-sites" data-page="reference-sites">🔗 株式関連参考サイト</a>
     <a href="#page-help" data-page="help" class="">❓ヘルプ</a>
   </nav>
+    </div>
+    <button type="button" class="menu-scroll-button" id="menuScrollRight" aria-label="メニューを右にスクロール" aria-controls="mainMenu">›</button>
+  </div>
+  <p class="menu-scroll-hint" id="menuScrollHint">↔ 横にスワイプできます・矢印でも移動できます</p>
   <div class="container">
     <div id="msg" class="msg"></div>
 
@@ -1325,7 +1348,16 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
 
     
     <!-- 株主優待 -->
-    <div id="page-earnings" class="page"><div class="card"><h2>今月の決算発表予定</h2><p>JPXで公表された予定です。変更や未掲載の場合があります。</p><button class="btn btn-secondary" onclick="stockExtras.loadEarningsMonth()">表示を更新</button><div id="earningsMonthList"></div></div></div>
+    <div id="page-upcoming-dividends" class="page"><div class="card"><h2>今日から2週間先の配当権利確定銘柄</h2><div id="upcoming-dividendsList"></div></div></div>
+    <div id="page-upcoming-benefits" class="page"><div class="card"><h2>今日から2週間先の優待権利確定銘柄</h2><div id="upcoming-benefitsList"></div></div></div>
+    <div id="page-earnings" class="page"><div class="card"><h2>今日から2週間先の決算発表銘柄</h2>
+      <form class="form-row" onsubmit="event.preventDefault();stockExtras.applyEarningsFilter()">
+        <label>株価下限（円）<input id="earningsPriceMin" type="number" min="0" step="any" inputmode="decimal" style="width:140px" placeholder="指定なし"></label>
+        <label>株価上限（円）<input id="earningsPriceMax" type="number" min="0" step="any" inputmode="decimal" style="width:140px" placeholder="指定なし"></label>
+        <button class="btn btn-primary" type="submit">株価で絞込検索</button><button class="btn btn-secondary" type="button" onclick="stockExtras.applyEarningsFilter(true)">条件を解除</button>
+        <button class="btn btn-secondary" type="button" onclick="stockExtras.loadEarningsMonth()">表示を更新</button>
+      </form><p id="earningsPriceStatus" role="status"></p><div id="earningsMonthList"></div>
+    </div></div>
     <div id="page-benefits" class="page">
       <div class="card">
         <h2>🎁 株主優待リスト</h2>
@@ -2485,6 +2517,8 @@ function openPage(page, navItem) {
 
   if (typeof trackEvent === "function") trackEvent("app_tab_view", { tab_name: page });
   if (page === "earnings") window.stockExtras?.loadEarningsMonth();
+  if (page === "upcoming-dividends") window.stockExtras?.loadWindowList("dividends");
+  if (page === "upcoming-benefits") window.stockExtras?.loadWindowList("benefits");
   if (page === "fav") renderFavList();
   if (page === "rec") renderRecList();
   if (page === "movers") loadMovers();
@@ -2493,7 +2527,7 @@ function openPage(page, navItem) {
 }
 
 function pageFromHash() {
-  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|earnings|evaluation|reference-sites|help|widget-setup)$/);
+  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|earnings|upcoming-dividends|upcoming-benefits|evaluation|reference-sites|help|widget-setup)$/);
   if (m && m[1] === "widget-setup" && !IS_IPHONE) return "home";
   return m ? m[1] : "home";
 }
@@ -4000,7 +4034,8 @@ async function loadMovers(force=false){
 // 初期表示
 renderFavList();
 </script>
-<script src="./stock_extras.js?v=20261023-earnings-fold-2" defer></script>
+<script src="./menu_scroll.js?v=20261023-1" defer></script>
+<script src="./stock_extras.js?v=20261023-two-week-1" defer></script>
 <script src="./news_client.js" defer></script>
 <script src="./signals_panel.js" defer></script>
 </body>

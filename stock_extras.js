@@ -39,36 +39,71 @@
       get(path+'?symbol='+encodeURIComponent(symbol),ttl).then(data=>{if(box.dataset.sequence===String(seq))box.querySelector(`[data-extra="${part}"]`).innerHTML=renderer(data);}).catch(error=>{if(box.dataset.sequence===String(seq))box.querySelector(`[data-extra="${part}"]`).innerHTML=`<p>${esc(error.message)}</p>`;});
     }
   }
+  const todayIso=()=>{const x=jst();return `${x.year}-${String(x.month).padStart(2,'0')}-${String(x.day).padStart(2,'0')}`;};
+  const windowPath=(kind='')=>`/api/events/window?asof=${todayIso()}${kind?'&kind='+kind:''}`;
   async function loadMonthlySummary(){
-    const {year,month}=jst();
     try{
-      const data=await get(`/api/events/month?year=${year}&month=${month}`,3600000);
-      for(const [type,id,noteId] of [['dividends','currentDividendCount','currentDividendCountNote'],['benefits','currentBenefitCount','currentBenefitCountNote'],['earnings','currentEarningsCount','currentEarningsCountNote']]){
-        const count=document.getElementById(id),note=document.getElementById(noteId),value=data[type];
-        if(count)count.textContent=value?.count==null?'—':Number(value.count).toLocaleString('ja-JP')+'銘柄';
-        if(note)note.textContent=type==='earnings'?`${year}年${month}月・JPX予定表に掲載された範囲（全銘柄の網羅ではありません）`:type==='benefits'?`${year}年${month}月の登録済み権利月候補・権利日と最新制度は未確認`:`${year}年${month}月の配当権利日候補・未確認日は候補表示`;
+      const data=await get(windowPath(),3600000);
+      for(const [type,id] of [['dividends','currentDividendCount'],['benefits','currentBenefitCount'],['earnings','currentEarningsCount']]){
+        const el=document.getElementById(id);if(el)el.textContent=data[type]?.count==null?'—':Number(data[type].count).toLocaleString('ja-JP')+'銘柄';
       }
+      const note=document.getElementById('eventWindowNote');
+      if(note)note.textContent=`${data.start}～${data.end}（両日を含む）。件数から一覧を開けます。配当は決算日を基にした候補、優待は登録情報、決算はJPX掲載分です。企業IRで未確認の情報を含み、全銘柄を網羅するものではありません。優待の権利日未確認 ${data.benefits?.unknownDateCount??'—'}銘柄は期間内か判定できないため件数から除外しています。${Object.values(data).some(x=>x?.status==='error'||x?.status==='partial'||x?.stale)?'一部の情報が未取得、または前回取得情報です。':''}`;
     }catch{for(const id of ['currentDividendCount','currentBenefitCount','currentEarningsCount']){const el=document.getElementById(id);if(el)el.textContent='取得失敗';}}
   }
-  function openBenefits(){const {month}=jst();location.hash='#page-benefits';openPage('benefits');document.getElementById('benefitMonth').value=String(month);loadBenefitList();}
-  let earningsSeq=0;
-  async function loadEarningsMonth(){
-    const seq=++earningsSeq,{year,month}=jst();const box=document.getElementById('earningsMonthList');if(!box)return;box.textContent='今月の決算発表予定を取得中…';
+  function openBenefits(){location.hash='#page-upcoming-benefits';openPage('upcoming-benefits');}
+  function bindCompanyLinks(box){box.querySelectorAll('[data-earnings-code]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();location.hash='#page-detail';openPage('detail');evaluateDetailStock(link.dataset.earningsCode);}));}
+  const companyCells=x=>`<td><a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(String(x.code))}.T" target="_blank" rel="noopener noreferrer">${esc(x.code)}</a></td><td><a href="#page-detail" data-earnings-code="${esc(x.code)}">${esc(x.name)}</a></td>`;
+  async function loadWindowList(kind){
+    const box=document.getElementById('upcoming-'+kind+'List');if(!box)return;box.textContent='今日から2週間先の予定を取得中…';const key=todayIso();box.dataset.request=key;
     try{
-      const data=await get(`/api/events/month?year=${year}&month=${month}&kind=earnings`,3600000);if(seq!==earningsSeq)return;
-      const current=jst(),today=`${current.year}-${String(current.month).padStart(2,'0')}-${String(current.day).padStart(2,'0')}`;
-      const groups=new Map(),codes=new Set(),prefix=`${year}-${String(month).padStart(2,'0')}-`;
-      for(const item of data.items||[]){
-        if(!/^\d{4}-\d{2}-\d{2}$/.test(item.date)||!item.date.startsWith(prefix)||item.date<today)continue;
-        if(!groups.has(item.date))groups.set(item.date,new Map());
-        groups.get(item.date).set(String(item.code),item);codes.add(String(item.code));
+      const data=await get(windowPath(kind),3600000);if(box.dataset.request!==key)return;
+      box.innerHTML=`<p>${esc(data.start)}～${esc(data.end)}：${data.count==null?'取得失敗':Number(data.count)+'銘柄'}${kind==='benefits'?` ／ 権利日未確認の${data.unknownDateCount??'—'}銘柄は除外`:''}</p>${data.status==='error'?'<p>予定を取得できませんでした。</p>':(data.items||[]).length?`<div style="overflow:auto"><table><thead><tr><th>権利確定日・候補</th><th>コード</th><th>銘柄</th></tr></thead><tbody>${data.items.map(x=>`<tr><td>${esc(x.date)}</td>${companyCells(x)}</tr>`).join('')}</tbody></table></div>`:'<p>この期間の日付が確認できる登録情報はありません。該当する制度がないことを意味するものではありません。</p>'}`;bindCompanyLinks(box);
+    }catch(error){box.textContent=error.message;}
+  }
+  let earningsSeq=0,earningsState=null,lastQuoteRequestAt=0;const quoteCache=new Map();
+  function earningsRows(state){return state.rows.filter(x=>{if(state.min==null&&state.max==null)return true;const p=state.prices.get(String(x.code))?.price;return p!=null&&(state.min==null||p>=state.min)&&(state.max==null||p<=state.max);});}
+  function renderEarnings(state){
+    if(earningsState!==state)return;const box=document.getElementById('earningsMonthList');if(!box)return;
+    const open=new Set([...box.querySelectorAll('details[open]')].map(x=>x.dataset.earningsDate));const groups=new Map(),rows=earningsRows(state);
+    for(const x of rows){if(!groups.has(x.date))groups.set(x.date,new Map());groups.get(x.date).set(String(x.code),x);}
+    const codes=new Set(rows.map(x=>String(x.code))),filtered=state.min!=null||state.max!=null;
+    box.innerHTML=`<p>${esc(state.data.start)}～${esc(state.data.end)}：${codes.size}銘柄${filtered?'（株価条件に一致する取得済み銘柄）':''}</p>${state.data.status==='error'?'<p>予定表の取得に失敗しました。</p>':groups.size?[...groups.keys()].sort().map(day=>{
+      const items=[...groups.get(day).values()].sort((a,b)=>String(a.code).localeCompare(String(b.code),'ja'));
+      return `<details data-earnings-date="${esc(day)}"${open.has(day)?' open':''} style="margin:12px 0"><summary style="cursor:pointer;padding:10px 0"><strong>${esc(day)}（${items.length}銘柄）</strong></summary><div style="overflow:auto"><table><thead><tr><th>コード</th><th>銘柄</th><th>現在株価</th></tr></thead><tbody>${items.map(x=>{
+        const q=state.prices.get(String(x.code));const time=q?.timestamp?new Date(q.timestamp*1000).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'}):'';
+        return `<tr>${companyCells(x)}<td>${q?yen(q.price):'取得待ち'}${time?`<br><small>配信 ${esc(time)}</small>`:''}${q?.status==='error'?'<br><small>取得失敗</small>':''}</td></tr>`;
+      }).join('')}</tbody></table></div></details>`;
+    }).join(''):'<p>この期間・株価条件に一致する取得済みの予定はありません。</p>'}`;
+    bindCompanyLinks(box);box.querySelectorAll('details').forEach(el=>el.addEventListener('toggle',()=>{if(el.open)queueEarningsPrices(state,state.rows.filter(x=>x.date===el.dataset.earningsDate));}));
+    const status=document.getElementById('earningsPriceStatus');if(status)status.textContent=`株価取得 ${state.prices.size}/${new Set(state.rows.map(x=>String(x.code))).size}銘柄。${state.busy?'順次取得中… ':''}日付を展開すると株価を取得します。価格条件の検索時は全対象を取得し、未取得・取得失敗は絞込結果から除外します。株価は配信時刻の値です。`;
+  }
+  async function queueEarningsPrices(state,rows){
+    let changed=false;
+    for(const x of rows){const code=String(x.code),cached=quoteCache.get(code);if(!state.prices.has(code)&&cached&&Date.now()-cached.at<60000){state.prices.set(code,cached.data);changed=true;}if(!state.prices.has(code)&&!state.requested.has(code)){state.requested.add(code);state.queue.push(code);}}
+    if(state.busy||!state.queue.length){if(changed)renderEarnings(state);return;}state.busy=true;renderEarnings(state);
+    try{
+      while(state.queue.length&&earningsState===state){
+        const wait=Math.max(0,2100-(Date.now()-lastQuoteRequestAt));if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
+        if(earningsState!==state)break;lastQuoteRequestAt=Date.now();const codes=state.queue.splice(0,12);
+        try{const data=await get('/api/events/prices?symbols='+encodeURIComponent(codes.map(x=>x+'.T').join(',')),60000);for(const code of codes){const q=(data.items||[]).find(x=>x.symbol===code+'.T')||{price:null,status:'error'};state.prices.set(code,q);quoteCache.set(code,{at:Date.now(),data:q});}}
+        catch{for(const code of codes)state.prices.set(code,{price:null,status:'error'});}
+        renderEarnings(state);
       }
-      const days=[...groups.keys()].sort();
-      box.innerHTML=`<p>${year}年${month}月・${esc(today)}以降：JPX掲載分 ${codes.size}銘柄。過ぎた予定日は表示しません。${esc(data.note||'取得範囲には限りがあります。')}</p>${data.status==='error'?'<p>予定表の取得に失敗しました。</p>':days.length?days.map(day=>{
-        const rows=[...groups.get(day).values()].sort((a,b)=>String(a.code).localeCompare(String(b.code),'ja'));
-        return `<details style="margin:12px 0"><summary style="cursor:pointer;padding:10px 0"><strong>${esc(day)}（${rows.length}銘柄）</strong></summary><div style="overflow:auto"><table><thead><tr><th>コード</th><th>銘柄</th></tr></thead><tbody>${rows.map(x=>`<tr><td><a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(String(x.code))}.T" target="_blank" rel="noopener noreferrer">${esc(x.code)}</a></td><td><a href="#page-detail" data-earnings-code="${esc(x.code)}">${esc(x.name)}</a></td></tr>`).join('')}</tbody></table></div></details>`;
-      }).join(''):'<p>今月の今日以降の決算発表予定は掲載されていません。</p>'}`;
-      box.querySelectorAll('[data-earnings-code]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();location.hash='#page-detail';openPage('detail');evaluateDetailStock(link.dataset.earningsCode);}));
+    }finally{state.busy=false;renderEarnings(state);}
+  }
+  function applyEarningsFilter(clear=false){
+    const state=earningsState;if(!state)return;const low=document.getElementById('earningsPriceMin'),high=document.getElementById('earningsPriceMax');if(clear){low.value='';high.value='';}
+    const min=low.value.trim()===''?null:Number(low.value),max=high.value.trim()===''?null:Number(high.value);
+    if((min!=null&&(!Number.isFinite(min)||min<0))||(max!=null&&(!Number.isFinite(max)||max<0))||(min!=null&&max!=null&&min>max)){document.getElementById('earningsPriceStatus').textContent='株価の下限・上限を正しく指定してください。';return;}
+    state.min=min;state.max=max;renderEarnings(state);if(!clear&&(min!=null||max!=null))queueEarningsPrices(state,state.rows);
+  }
+  async function loadEarningsMonth(){
+    const seq=++earningsSeq;earningsState=null;const box=document.getElementById('earningsMonthList');if(!box)return;box.textContent='今日から2週間先の決算発表予定を取得中…';
+    try{
+      const data=await get(windowPath('earnings'),3600000);if(seq!==earningsSeq)return;
+      const rows=(data.items||[]).filter(x=>x.date>=todayIso()&&x.date<=data.end);const state={data,rows,prices:new Map(),requested:new Set(),queue:[],busy:false,min:null,max:null};earningsState=state;renderEarnings(state);
+      const low=document.getElementById('earningsPriceMin'),high=document.getElementById('earningsPriceMax');if(low&&high&&(low.value||high.value))applyEarningsFilter();
     }catch(error){if(seq===earningsSeq)box.textContent=error.message;}
   }
   const registryKey='stockLearningEverFavoritesV1';let enrollPending=null;
@@ -93,6 +128,6 @@
       finally{enrollPending=null;}
     });return enrollPending;
   }
-  window.stockExtras={loadDetail,loadMonthlySummary,openBenefits,loadEarningsMonth,enroll,creditHtml,eventsHtml,comparisonHtml};
+  window.stockExtras={loadDetail,loadMonthlySummary,openBenefits,loadEarningsMonth,enroll,loadWindowList,applyEarningsFilter,creditHtml,eventsHtml,comparisonHtml};
   window.addEventListener('DOMContentLoaded',()=>enroll(loadFavs()));
 })();

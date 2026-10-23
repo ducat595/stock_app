@@ -35,4 +35,6 @@ jobs:
           for file in /tmp/inline*.js; do node --check "$file"; done
           node --check signals_panel.js
           node --check news_client.js
+          node --check stock_extras.js
+          node --check menu_scroll.js
           node --test tests/*.test.cjs
