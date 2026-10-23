@@ -98,11 +98,24 @@
     if((min!=null&&(!Number.isFinite(min)||min<0))||(max!=null&&(!Number.isFinite(max)||max<0))||(min!=null&&max!=null&&min>max)){document.getElementById('earningsPriceStatus').textContent='株価の下限・上限を正しく指定してください。';return;}
     state.min=min;state.max=max;renderEarnings(state);if(!clear&&(min!=null||max!=null))queueEarningsPrices(state,state.rows);
   }
-  async function loadEarningsMonth(){
-    const seq=++earningsSeq;earningsState=null;const box=document.getElementById('earningsMonthList');if(!box)return;box.textContent='今日から2週間先の決算発表予定を取得中…';
+  function searchEarningsMonth(){location.hash='#page-earnings-search';return loadEarningsMonth('month');}
+  async function loadEarningsMonth(requestedMode){
+    const mode=requestedMode==='month'||location.hash==='#page-earnings-search'?'month':'window';
+    const seq=++earningsSeq;earningsState=null;const box=document.getElementById('earningsMonthList');if(!box)return;
+    const input=document.getElementById('earningsSearchMonth');if(input&&!input.value)input.value=todayIso().slice(0,7);
+    const title=document.getElementById('earningsPageTitle');if(title)title.textContent=mode==='month'?'決算発表検索':'今日から2週間先の決算発表銘柄';
+    box.textContent='決算発表予定を取得中…';
     try{
-      const data=await get(windowPath('earnings'),3600000);if(seq!==earningsSeq)return;
-      const rows=(data.items||[]).filter(x=>x.date>=todayIso()&&x.date<=data.end);const state={data,rows,prices:new Map(),requested:new Set(),queue:[],busy:false,min:null,max:null};earningsState=state;renderEarnings(state);
+      let data;
+      if(mode==='month'){
+        const value=input?.value||todayIso().slice(0,7);if(!/^20\d{2}-\d{2}$/.test(value))throw new Error('検索する年月を指定してください。');
+        const [year,month]=value.split('-').map(Number);if(month<1||month>12)throw new Error('検索する年月を指定してください。');
+        const response=await get(`/api/events/month?year=${year}&month=${month}&kind=earnings`,3600000);
+        data={...response,start:value+'-01',end:new Date(Date.UTC(year,month,0)).toISOString().slice(0,10)};
+      }else data=await get(windowPath('earnings'),3600000);
+      if(seq!==earningsSeq)return;
+      const start=mode==='month'?data.start:todayIso();
+      const rows=(data.items||[]).filter(x=>x.date>=start&&x.date<=data.end);const state={data,rows,prices:new Map(),requested:new Set(),queue:[],busy:false,min:null,max:null};earningsState=state;renderEarnings(state);
       const low=document.getElementById('earningsPriceMin'),high=document.getElementById('earningsPriceMax');if(low&&high&&(low.value||high.value))applyEarningsFilter();
     }catch(error){if(seq===earningsSeq)box.textContent=error.message;}
   }
@@ -128,6 +141,6 @@
       finally{enrollPending=null;}
     });return enrollPending;
   }
-  window.stockExtras={loadDetail,loadMonthlySummary,openBenefits,loadEarningsMonth,enroll,loadWindowList,applyEarningsFilter,creditHtml,eventsHtml,comparisonHtml};
+  window.stockExtras={loadDetail,loadMonthlySummary,openBenefits,loadEarningsMonth,searchEarningsMonth,enroll,loadWindowList,applyEarningsFilter,creditHtml,eventsHtml,comparisonHtml};
   window.addEventListener('DOMContentLoaded',()=>enroll(loadFavs()));
 })();

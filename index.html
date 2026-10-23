@@ -1208,7 +1208,7 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
     <a href="#page-movers" data-page="movers" class="">📈 値上がり・値下がり</a>
     <a href="#page-benefits" data-page="benefits" class="">🎁 株主優待検索</a>
     <a href="#page-dividends" data-page="dividends" class="">💰 配当検索</a>
-    <a href="#page-earnings" data-page="earnings">📅 決算発表検索</a>
+    <a href="#page-earnings-search" data-page="earnings-search">📅 決算発表検索</a>
     <a href="#page-evaluation" data-page="evaluation" class="">📊 株価の評価方法</a>
     <a href="#page-reference-sites" data-page="reference-sites">🔗 株式関連参考サイト</a>
     <a href="#page-help" data-page="help" class="">❓ヘルプ</a>
@@ -1374,7 +1374,12 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
     <!-- 株主優待 -->
     <div id="page-upcoming-dividends" class="page"><div class="card"><h2>今日から2週間先の配当権利確定銘柄</h2><div id="upcoming-dividendsList"></div></div></div>
     <div id="page-upcoming-benefits" class="page"><div class="card"><h2>今日から2週間先の優待権利確定銘柄</h2><div id="upcoming-benefitsList"></div></div></div>
-    <div id="page-earnings" class="page"><div class="card"><h2>今日から2週間先の決算発表銘柄</h2>
+    <div id="page-earnings" class="page"><div class="card"><h2 id="earningsPageTitle">決算発表検索</h2>
+      <form id="earningsMonthForm" class="form-row" onsubmit="event.preventDefault();stockExtras.searchEarningsMonth()">
+        <label>決算発表月<input id="earningsSearchMonth" type="month" required style="min-width:180px"></label>
+        <button class="btn btn-primary" type="submit">指定月で検索</button>
+      </form>
+      <p class="muted">JPXの掲載済み予定を検索します。指定月の過去日も対象です。未掲載の月は取得できません。</p>
       <form class="form-row" onsubmit="event.preventDefault();stockExtras.applyEarningsFilter()">
         <label>株価下限（円）<input id="earningsPriceMin" type="number" min="0" step="any" inputmode="decimal" style="width:140px" placeholder="指定なし"></label>
         <label>株価上限（円）<input id="earningsPriceMax" type="number" min="0" step="any" inputmode="decimal" style="width:140px" placeholder="指定なし"></label>
@@ -2525,6 +2530,7 @@ async function loadDividendList(){
 
 // ========== ナビ ==========
 function openPage(page, navItem) {
+  if(page === "earnings-search") page="earnings";
   if (page === "widget-setup" && !IS_IPHONE) {
     page = "home";
     if (location.hash === "#page-widget-setup") history.replaceState(null, "", "#page-home");
@@ -2536,7 +2542,7 @@ function openPage(page, navItem) {
   if (!target) return;
 
   target.classList.add("active");
-  const item = navItem || document.querySelector(`.nav [data-page="${page}"]`);
+  const item = navItem || document.querySelector(`.nav [data-page="${page==='earnings'?'earnings-search':page}"]`);
   if (item) item.classList.add("active");
 
   if (typeof trackEvent === "function") trackEvent("app_tab_view", { tab_name: page });
@@ -2551,7 +2557,7 @@ function openPage(page, navItem) {
 }
 
 function pageFromHash() {
-  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|earnings|upcoming-dividends|upcoming-benefits|evaluation|reference-sites|help|widget-setup)$/);
+  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|earnings|earnings-search|upcoming-dividends|upcoming-benefits|evaluation|reference-sites|help|widget-setup)$/);
   if (m && m[1] === "widget-setup" && !IS_IPHONE) return "home";
   return m ? m[1] : "home";
 }
@@ -4059,7 +4065,7 @@ async function loadMovers(force=false){
 renderFavList();
 </script>
 <script src="./menu_scroll.js?v=20261023-1" defer></script>
-<script src="./stock_extras.js?v=20261023-earnings-columns-1" defer></script>
+<script src="./stock_extras.js?v=20261023-earnings-month-1" defer></script>
 <script src="./news_client.js" defer></script>
 <script src="./signals_panel.js" defer></script>
 </body>
