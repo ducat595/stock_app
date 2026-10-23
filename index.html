@@ -1825,6 +1825,29 @@ function saveFavs(list) {
 window.widgetSyncKey = () => widgetToken();
 window.syncWidgetNow = () => syncWidgetFavorites(loadFavs());
 
+window.addEventListener("DOMContentLoaded", () => {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = "📱 ウィジェット同期";
+  button.style.cssText = "position:fixed;right:12px;bottom:76px;z-index:9999;padding:9px 12px;border-radius:10px;background:#234e80;color:white;border:1px solid #7599b5;font-size:12px";
+  button.onclick = async () => {
+    try {
+      await window.syncWidgetNow();
+      const key = widgetToken();
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(key);
+        alert("お気に入りを同期しました。同期キーをコピーしました。Scriptableの CONFIG.widgetToken に一度だけ貼り付けてください。");
+      } else {
+        prompt("Scriptableの CONFIG.widgetToken に貼り付ける同期キー", key);
+      }
+    } catch(e) {
+      alert("同期できませんでした: " + e.message + "。Renderの設定とSupabaseのテーブルを確認してください。");
+    }
+  };
+  document.body.appendChild(button);
+});
+
+
 function downloadFavoritesBackup(list) {
   try {
     const payload = {
