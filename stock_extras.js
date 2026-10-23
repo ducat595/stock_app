@@ -56,8 +56,18 @@
     const seq=++earningsSeq,{year,month}=jst();const box=document.getElementById('earningsMonthList');if(!box)return;box.textContent='今月の決算発表予定を取得中…';
     try{
       const data=await get(`/api/events/month?year=${year}&month=${month}&kind=earnings`,3600000);if(seq!==earningsSeq)return;
-      const unique=new Map();for(const item of data.items||[]){const row=unique.get(item.code)||{...item,dates:[]};if(!row.dates.includes(item.date))row.dates.push(item.date);unique.set(item.code,row);}
-      box.innerHTML=`<p>${year}年${month}月：JPX掲載分 ${unique.size}銘柄。${esc(data.note||'取得範囲には限りがあります。')}</p>${data.status==='error'?'<p>予定表の取得に失敗しました。</p>':`<div style="overflow:auto"><table><thead><tr><th>予定日</th><th>コード</th><th>銘柄</th></tr></thead><tbody>${[...unique.values()].map(x=>`<tr><td>${x.dates.map(esc).join(' ／ ')}</td><td><a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(String(x.code))}.T" target="_blank" rel="noopener noreferrer">${esc(x.code)}</a></td><td><a href="#page-detail" data-earnings-code="${esc(x.code)}">${esc(x.name)}</a></td></tr>`).join('')}</tbody></table></div>`}`;
+      const current=jst(),today=`${current.year}-${String(current.month).padStart(2,'0')}-${String(current.day).padStart(2,'0')}`;
+      const groups=new Map(),codes=new Set(),prefix=`${year}-${String(month).padStart(2,'0')}-`;
+      for(const item of data.items||[]){
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(item.date)||!item.date.startsWith(prefix)||item.date<today)continue;
+        if(!groups.has(item.date))groups.set(item.date,new Map());
+        groups.get(item.date).set(String(item.code),item);codes.add(String(item.code));
+      }
+      const days=[...groups.keys()].sort();
+      box.innerHTML=`<p>${year}年${month}月・${esc(today)}以降：JPX掲載分 ${codes.size}銘柄。過ぎた予定日は表示しません。${esc(data.note||'取得範囲には限りがあります。')}</p>${data.status==='error'?'<p>予定表の取得に失敗しました。</p>':days.length?days.map(day=>{
+        const rows=[...groups.get(day).values()].sort((a,b)=>String(a.code).localeCompare(String(b.code),'ja'));
+        return `<details style="margin:12px 0"><summary style="cursor:pointer;padding:10px 0"><strong>${esc(day)}（${rows.length}銘柄）</strong></summary><div style="overflow:auto"><table><thead><tr><th>コード</th><th>銘柄</th></tr></thead><tbody>${rows.map(x=>`<tr><td><a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(String(x.code))}.T" target="_blank" rel="noopener noreferrer">${esc(x.code)}</a></td><td><a href="#page-detail" data-earnings-code="${esc(x.code)}">${esc(x.name)}</a></td></tr>`).join('')}</tbody></table></div></details>`;
+      }).join(''):'<p>今月の今日以降の決算発表予定は掲載されていません。</p>'}`;
       box.querySelectorAll('[data-earnings-code]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();location.hash='#page-detail';openPage('detail');evaluateDetailStock(link.dataset.earningsCode);}));
     }catch(error){if(seq===earningsSeq)box.textContent=error.message;}
   }
