@@ -2592,23 +2592,18 @@ async function searchDetailStocks() {
   } catch(e) { box.innerHTML=`<p class="muted">検索に失敗しました：${escapeHtml(e.message)}</p>`; }
 }
 
-let detailNewsController=null;
-function loadDetailNews(code, seq) {
-  if(detailNewsController)detailNewsController.abort();
-  const controller=new AbortController();detailNewsController=controller;
+function loadDetailNews(code, seq, force=false) {
   const result=document.getElementById('detailEvaluationResult');
   let box=document.getElementById('detailNewsPanel');
   if(!box){box=document.createElement('section');box.id='detailNewsPanel';box.className='card';result.insertAdjacentElement('afterend',box);}
   const render=data=>{
     if(seq!==detailEvalSequence)return;
     box.innerHTML=typeof window.stockNewsHtml==='function'?window.stockNewsHtml(data,escapeHtml):'<p>ニュース表示機能を読み込めませんでした。ページを再読み込みしてください。</p>';
-    if(data.status!=='loading'){const retry=document.createElement('button');retry.type='button';retry.className='btn btn-secondary btn-sm';retry.textContent='ニュースを再取得';retry.addEventListener('click',()=>loadDetailNews(code,seq));box.appendChild(retry);}
+    if(data.status!=='loading'){const retry=document.createElement('button');retry.type='button';retry.className='btn btn-secondary btn-sm';retry.textContent='ニュースを再取得';retry.disabled=!!data.refreshing;retry.addEventListener('click',()=>loadDetailNews(code,seq,true));box.appendChild(retry);}
   };
-  render({status:'loading',items:[]});
-  const timeout=setTimeout(()=>controller.abort(),65000);
-  fetch(`${API_BASE}/api/stock-news?symbol=${encodeURIComponent(String(code).replace(/\.T$/i,'')+'.T')}`,{signal:controller.signal})
-    .then(async response=>{if(!response.ok)throw new Error('news');return response.json();})
-    .then(render).catch(()=>render({status:'error',items:[]})).finally(()=>clearTimeout(timeout));
+  const symbol=String(code).replace(/\.T$/i,'').toUpperCase()+'.T';
+  if(!window.stockNewsClient){render({status:'error',items:[]});return;}
+  return window.stockNewsClient.load(symbol,`${API_BASE}/api/stock-news?symbol=${encodeURIComponent(symbol)}`,render,{force});
 }
 let detailEvalSequence=0;
 const detailQuoteCache=new Map();
@@ -3575,7 +3570,7 @@ function closingForecastDetailHtml(q,model){
  const d=model?.detail;
  if(!d)return `<div class="closing-forecast-detail" style="margin-top:10px;padding-top:10px;border-top:2px solid #cbd5e1"><strong>🎯 大引け予想価格：取得できませんでした</strong><br><small>サーバー予測を取得できないため、大引け予想を表示できません。</small></div>`;
  const esc=v=>escapeHtml(String(v??""));
- return `<div class="closing-forecast-detail" style="margin-top:10px;padding-top:10px;border-top:2px solid #cbd5e1;line-height:1.75;font-size:12px"><div class="closing-forecast-head"><strong>私の中心予想：${yen0(d.rangeLow)}～${yen0(d.rangeHigh)}円</strong><span class="closing-price">🎯 大引け ${yen0(d.center)}円前後</span><small>上昇確率 ${d.upProbability}% ／ 下落確率 ${d.downProbability}%</small></div>その中でも、現時点では<br><br><strong style="font-size:15px">🎯 大引け ${yen0(d.center)}円前後</strong><br><br>を本命にします。<br><br><strong>今日の重要ポイント</strong><br><br>${yen0(d.up1)}円突破<br>→ まず${yen0(d.up2)}円を試す<br>→ ${yen0(d.up2)}円を超えれば${yen0(d.up3)}円方向<br><br>${yen0(d.down1)}円割れ<br>→ 今日の弱さが強まり、${yen0(d.down2)}～${yen0(d.down3)}円まで調整する可能性<br><br>${yen0(d.recovery)}円回復<br>→ 前日終値を取り戻すため、午後の上昇シナリオが強くなります。<br><br>現在は${yen0(d.price)}円なので、「${esc(d.situation)}」と見ます。<br><br>ただし${esc(q?.name||q?.code||"この銘柄")}は、${esc(d.moveDesc)}。短期間の値動きが大きい場合は、利益確定売り／押し目買いなどのリスクにも注意が必要です。<br><br>一方、${esc(d.plus)}。<br><br><strong>結論：今日は「${yen0(d.key)}円を維持できるか」が最大のポイント。私は大引け${yen0(d.center)}円前後、上昇確率${d.upProbability}%、下落確率${d.downProbability}%程度と見ます。</strong><br><br>なお、${yen0(d.upTurn)}円を超えてきた場合は、この予想を一気に上方修正します。逆に${yen0(d.downTurn)}円を割った場合は下方修正です。<br><small style="color:#64748b">※支持線・抵抗線、予想レンジ、確率は機械的な参考値であり、確率・予想レンジは過去検証で校正済みではありません。実際の板情報は取得していません。</small></div>`;
+ return `<div class="closing-forecast-detail" style="margin-top:10px;padding-top:10px;border-top:2px solid #cbd5e1;line-height:1.75;font-size:12px"><div class="closing-forecast-head"><strong>私の中心予想：${yen0(d.rangeLow)}～${yen0(d.rangeHigh)}円</strong><span class="closing-price">🎯 大引け ${yen0(d.center)}円前後</span><small>上昇確率 ${d.upProbability}% ／ 下落確率 ${d.downProbability}%</small></div>${typeof window.stockNewsImpactHtml==='function'?window.stockNewsImpactHtml(model,esc):''}その中でも、現時点では<br><br><strong style="font-size:15px">🎯 大引け ${yen0(d.center)}円前後</strong><br><br>を本命にします。<br><br><strong>今日の重要ポイント</strong><br><br>${yen0(d.up1)}円突破<br>→ まず${yen0(d.up2)}円を試す<br>→ ${yen0(d.up2)}円を超えれば${yen0(d.up3)}円方向<br><br>${yen0(d.down1)}円割れ<br>→ 今日の弱さが強まり、${yen0(d.down2)}～${yen0(d.down3)}円まで調整する可能性<br><br>${yen0(d.recovery)}円回復<br>→ 前日終値を取り戻すため、午後の上昇シナリオが強くなります。<br><br>現在は${yen0(d.price)}円なので、「${esc(d.situation)}」と見ます。<br><br>ただし${esc(q?.name||q?.code||"この銘柄")}は、${esc(d.moveDesc)}。短期間の値動きが大きい場合は、利益確定売り／押し目買いなどのリスクにも注意が必要です。<br><br>一方、${esc(d.plus)}。<br><br><strong>結論：今日は「${yen0(d.key)}円を維持できるか」が最大のポイント。私は大引け${yen0(d.center)}円前後、上昇確率${d.upProbability}%、下落確率${d.downProbability}%程度と見ます。</strong><br><br>なお、${yen0(d.upTurn)}円を超えてきた場合は、この予想を一気に上方修正します。逆に${yen0(d.downTurn)}円を割った場合は下方修正です。<br><small style="color:#64748b">※支持線・抵抗線、予想レンジ、確率は機械的な参考値であり、確率・予想レンジは過去検証で校正済みではありません。実際の板情報は取得していません。</small></div>`;
 }
 
 // ========== 一括チェック ==========
@@ -3986,6 +3981,7 @@ async function loadMovers(force=false){
 // 初期表示
 renderFavList();
 </script>
+<script src="./news_client.js" defer></script>
 <script src="./signals_panel.js" defer></script>
 </body>
 </html>

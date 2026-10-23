@@ -34,4 +34,5 @@ jobs:
           PY
           for file in /tmp/inline*.js; do node --check "$file"; done
           node --check signals_panel.js
-          node --test tests/news_panel.test.cjs
+          node --check news_client.js
+          node --test tests/*.test.cjs

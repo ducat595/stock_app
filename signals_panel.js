@@ -1,4 +1,8 @@
-/* v62 company news, observation signals and transparent forecast adjustments. */
+/* v63 trusted Japanese news, score ordering, cache-aware display and forecast commentary. */
+window.stockNewsSourceAllowed=function(item){
+  const domains=['yahoo.co.jp','jp.reuters.com','bloomberg.co.jp','nikkei.com','nhk.or.jp','news.web.nhk','jiji.com','kyodonews.jp','kyodo.co.jp','asahi.com','mainichi.jp','yomiuri.co.jp','sankei.com','news.ntv.co.jp','tv-asahi.co.jp','newsdig.tbs.co.jp','fnn.jp','tv-tokyo.co.jp','kabutan.jp','minkabu.jp','toyokeizai.net','diamond.jp','itmedia.co.jp','businessinsider.jp','gamebiz.jp','ryutsuu.biz'];
+  try{const url=new URL(item.url);if(url.protocol!=='https:'||url.username)return false;const host=url.hostname.toLowerCase();const source=host==='news.google.com'?String(item.sourceDomain||'').toLowerCase():host;return domains.some(d=>source===d||source.endsWith('.'+d))&&(host!=='news.google.com'||/^\/(rss\/)?articles\//.test(url.pathname));}catch{return false;}
+};
 window.stockSignalsHtml=function(model,esc,includeNews=true){
   if(!model || !model.featureSignals) return '';
   const sig=model.featureSignals||{}, events=model.disclosureLeads||[];
@@ -41,19 +45,52 @@ window.stockSignalsHtml=function(model,esc,includeNews=true){
 
 window.stockNewsHtml=function(data,esc){
   const safe=value=>esc(String(value==null?'':value));
-  const items=Array.isArray(data?.items)?data.items:[];
+  const originalItems=Array.isArray(data?.items)?data.items:[];
+  let items=originalItems.filter(window.stockNewsSourceAllowed);
+  let effect=data?.effect;
+  if(data?.fromCache||items.length!==originalItems.length){
+    const now=Date.now();
+    items=items.filter(item=>{const age=now-new Date(item.publishedAt).getTime();return Number.isFinite(age)&&age>=0&&age<=14*86400000;}).map(item=>{
+      const age=(now-new Date(item.publishedAt).getTime())/1000;
+      const eligible=age<=72*3600;
+      return {...item,predictionEligible:eligible,decayWeight:eligible?Math.max(.25,1-age/(72*3600)):0};
+    });
+    if(effect){const directional=items.filter(x=>x.predictionEligible&&Number(x.score));const score=directional.reduce((total,x)=>total+Number(x.score)*x.decayWeight,0)/Math.max(1,directional.length);effect={...effect,eligibleCount:items.filter(x=>x.predictionEligible).length,score,adjustmentPct:score*(effect.maxAdjustmentPct??.35)};}
+  }
+  const scoreOf=item=>item.score!=null&&Number.isFinite(Number(item.score))?Number(item.score):-Infinity;
+  items.sort((a,b)=>scoreOf(b)-scoreOf(a)||(new Date(b.publishedAt).getTime()||0)-(new Date(a.publishedAt).getTime()||0));
   const state=data?.status||'unavailable';
   const messages={loading:'ニュースを取得しています…',error:'ニュースの取得に失敗しました。時間をおいて再試行してください。',partial:'一部の取得先で失敗しました。取得できた関連ニュースを表示しています。',empty:'過去2週間の関連ニュースは見つかりませんでした。',unavailable:'ニュース機能の更新待ち、または取得状態が不明です。',ok:'銘柄コード・会社名で取得した関連ニュースです。'};
-  const effect=data?.effect;
   const signed=(v,dp=3)=>{const n=Number(v);return v!=null&&Number.isFinite(n)?(n>0?'+':'')+n.toFixed(dp):'—';};
-  const impact=effect?`<p style="font-size:12px">判定対象 ${Number(effect.eligibleCount)||0}件 ／ ニューススコア ${safe(signed(effect.score))}（−1～+1） ／ 予想騰落率への補正 ${safe(signed(effect.adjustmentPct))}%ポイント</p>`:'';
+  const badge=(score,label)=>{const n=Number(score),color=n>0?'#137333':n<0?'#c5221f':'#5f6368',background=n>0?'#e6f4ea':n<0?'#fce8e6':'#f1f3f4';return `<span class="news-score" data-direction="${n>0?'up':n<0?'down':'neutral'}" style="display:inline-block;padding:4px 8px;border-radius:8px;color:${color};background:${background};font-weight:700">${safe(label)} ${safe(signed(score,2))}</span>`;};
+  const impact=effect?`<p style="font-size:12px">判定対象 ${Number(effect.eligibleCount)||0}件 ／ ${badge(effect.score,'総合スコア')}（−1～+1） ／ 予想騰落率への補正 ${safe(signed(effect.adjustmentPct))}%ポイント</p>`:'';
   const cards=items.map(item=>{
     const validLink=typeof item.url==='string'&&/^https:\/\/[^/\s]+/i.test(item.url);
     const published=new Date(item.publishedAt);
     const date=Number.isNaN(published.getTime())?'日時不明':published.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'});
     const eligibility=item.predictionEligible?'予測への反映対象（72時間以内）':item.predictionEligible===false?'表示のみ（掲載後72時間超）':'表示のみ（判定状態不明）';
     const title=validLink?`<a href="${safe(item.url)}" target="_blank" rel="noopener noreferrer">${safe(item.title)}</a>`:safe(item.title);
-    return `<li style="padding:10px 0;border-bottom:1px solid #e2e8f0"><strong>${title}</strong><div><small>${safe(item.source)} ／ ${safe(date)}<br>${safe((item.categories||[]).join('・')||'中立・分類外')} ／ スコア ${safe(signed(item.score,2))}<br>${safe(eligibility)}</small></div></li>`;
+    return `<li style="padding:12px 0;border-bottom:1px solid #e2e8f0">${badge(item.score,Number(item.score)>0?'上昇材料':Number(item.score)<0?'下落材料':'中立')}<br><strong style="display:block;margin-top:7px">${title}</strong><div><small>${safe(item.source)} ／ ${safe(date)}<br>${safe((item.categories||[]).join('・')||'中立・分類外')}<br>${safe(eligibility)}</small></div></li>`;
+  });
+  const cacheNote=data?.refreshing?'保存済みのニュースを先に表示しています。最新情報を確認中…':data?.refreshFailed?'更新に失敗したため、保存済みのニュースを表示しています。':data?.fromCache?'保存済みのニュースを表示しています。':'';
+  const list=`<ul style="padding-left:20px">${cards.slice(0,12).join('')||'<li>表示できる記事はありません。</li>'}</ul>${cards.length>12?`<details><summary style="cursor:pointer">残り${cards.length-12}件を表示</summary><ul style="padding-left:20px">${cards.slice(12).join('')}</ul></details>`:''}`;
+  return `<div class="stock-news-content"><h3 style="font-size:16px">関連ニュース・企業材料（${items.length}件）</h3><p role="status">${safe(messages[state]||messages.unavailable)}${cacheNote?'<br>'+safe(cacheNote):''}</p>${impact}<p class="muted">スコアが高い順（プラス→マイナス）。掲載後2週間表示し、3日以内を予想の判定対象にします。</p><details><summary>スコアの見方・予想への反映</summary><p class="muted">緑は上昇材料、赤は下落材料、灰色は中立です。見出し・配信要約を分類し、経過時間で影響を弱めます。補正上限は±0.35%ポイント。公式TDnetとの照合・精度の校正は未実施です。予想コメントは、その予想を計算した時点の記事に基づきます。</p></details>${data?.fetchedAt?`<p class="muted">最終取得：${safe(new Date(data.fetchedAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'}))}</p>`:''}${list}</div>`;
+};
+
+window.stockNewsImpactHtml=function(model,esc){
+  const effect=model?.newsEffect;
+  if(!effect)return '';
+  if(Array.isArray(model.timeSlots)&&!model.timeSlots.some(x=>x.status==='forecast'&&x.newsAdjustmentPct!=null))return '<section class="news-forecast-comment"><strong>ニュースが予想に与えた影響</strong><p>これから先の予測対象がないため、この表示ではニュースによる価格補正は行っていません。</p></section>';
+  const safe=x=>esc(String(x??''));
+  const signed=x=>(Number(x)>0?'+':'')+Number(x).toFixed(3);
+  const contributors=Array.isArray(effect.contributors)?effect.contributors.filter(window.stockNewsSourceAllowed):[];
+  const closing=(model.timeSlots||[]).find(x=>x.label==='大引け'&&x.status==='forecast'&&x.baselineForecastPrice!=null&&x.newsAdjustmentPct!=null);
+  const prices=closing?`<p>ニュース補正前 ${safe(closing.baselineForecastPrice)}円 → 補正後 ${safe(closing.forecastPrice)}円</p>`:'';
+  const color=Number(effect.score)>0?'#137333':Number(effect.score)<0?'#c5221f':'#5f6368';
+  const articles=contributors.map(item=>{
+    const c=Number(item.contributionPct)>0?'#137333':Number(item.contributionPct)<0?'#c5221f':'#5f6368';
+    const title=typeof item.url==='string'&&/^https:\/\/[^/\s]+/i.test(item.url)?`<a href="${safe(item.url)}" target="_blank" rel="noopener noreferrer">${safe(item.title)}</a>`:safe(item.title);
+    return `<li>${title}<br>${safe(item.explanation)} <strong style="color:${c}">予想騰落率へ ${safe(signed(item.contributionPct))}%ポイント</strong></li>`;
   }).join('');
-  return `<div class="stock-news-content"><h3 style="font-size:16px">関連ニュース・企業材料（${items.length}件）</h3><p role="status">${safe(messages[state]||messages.unavailable)}</p>${impact}<p class="muted">掲載後14日間表示し、直近72時間を判定対象にします。見出し・配信要約をルールで分類し、経過時間で減衰。将来予想への補正上限は±0.35%ポイントです。公式TDnetとの照合・精度の校正は未実施です。反映値は各予想の計算時点で確定します。</p>${data?.fetchedAt?`<p class="muted">最終取得：${safe(new Date(data.fetchedAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'}))}</p>`:''}<ul style="padding-left:20px;max-height:440px;overflow:auto">${cards||'<li>表示できる記事はありません。</li>'}</ul></div>`;
+  return `<section class="news-forecast-comment" style="margin:14px 0;padding:12px;border:1px solid #dbe3ee;border-radius:10px"><strong style="color:${color}">ニュースが予想に与えた影響</strong><p>${safe(effect.commentary||'ニュースの補正値は予想価格・上昇確率に反映されています。記事別の説明は更新後の予想で表示します。')}</p>${prices}${articles?`<ul>${articles}</ul><small>影響の大きい記事を最大5件表示。掲載時刻と経過時間を考慮したルール判定です。</small>`:''}</section>`;
 };
