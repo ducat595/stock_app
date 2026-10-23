@@ -1149,6 +1149,10 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
       <div>
         <div class="dividend-month-summary-title">💰 今月の配当権利確定銘柄件数 <a id="currentDividendCount" class="dividend-month-summary-count dividend-count-link" href="#page-dividends" onclick="openCurrentDividendList();return false;" aria-label="今月の該当銘柄を表示">取得中…</a></div>
         <div id="currentDividendCountNote" class="dividend-month-summary-note">件数をクリックすると、今月の該当銘柄を表示します。</div>
+        <div class="dividend-month-summary-title">🎁 今月の優待権利確定銘柄 <a id="currentBenefitCount" class="dividend-count-link" href="#page-benefits" onclick="stockExtras.openBenefits();return false;">取得中…</a></div>
+        <div id="currentBenefitCountNote" class="dividend-month-summary-note"></div>
+        <div class="dividend-month-summary-title">📅 今月の決算発表銘柄 <a id="currentEarningsCount" class="dividend-count-link" href="#page-earnings">取得中…</a></div>
+        <div id="currentEarningsCountNote" class="dividend-month-summary-note"></div>
       </div>
     </div>
   </div>
@@ -1244,6 +1248,7 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
     <div id="page-fav" class="page">
       <div class="card">
         <h2>★ お気に入り管理</h2>
+        <p id="favoriteTrackingStatus" role="status"></p>
         <div class="form-row">
           <input type="text" id="addCode" placeholder="銘柄コードまたは会社名（例: 7203 / トヨタ）" style="width:280px" oninput="onSearchInput()">
           <button class="btn btn-primary" onclick="addFavorite()">コードで追加</button>
@@ -1319,6 +1324,7 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
 
     
     <!-- 株主優待 -->
+    <div id="page-earnings" class="page"><div class="card"><h2>今月の決算発表予定</h2><p>JPXで公表された予定です。変更や未掲載の場合があります。</p><button class="btn btn-secondary" onclick="stockExtras.loadEarningsMonth()">表示を更新</button><div id="earningsMonthList"></div></div></div>
     <div id="page-benefits" class="page">
       <div class="card">
         <h2>🎁 株主優待リスト</h2>
@@ -1866,6 +1872,7 @@ function saveFavs(list) {
     const json = JSON.stringify(list);
     localStorage.setItem(FAV_STORAGE_KEY, json);
     localStorage.setItem(FAV_BACKUP_KEY, json);
+    window.stockExtras?.enroll(list);
     syncWidgetFavorites(list).catch(e => console.warn("Widget sync failed:", e));
   } catch(e) {
     showMsg("お気に入りの保存に失敗しました", "err");
@@ -2256,7 +2263,7 @@ async function loadBenefitList() {
   try {
     const all=await streamBenefitData((partial,isFinal)=>{
       if (token!==benefitLoadToken) return;
-      const rows=partial.filter(x=>x.month===month).sort((a,b)=>{
+      const rows=[...new Map(partial.filter(x=>x.month===month).map(x=>[String(x.code),x])).values()].sort((a,b)=>{
         const d=benefitDateSortValue(a.recordDate)-benefitDateSortValue(b.recordDate);
         return d!==0?d:String(a.code).localeCompare(String(b.code),"ja");
       });
@@ -2409,22 +2416,7 @@ function renderDividendRows(items,token){
     </article>`;
   }).join('')}</div>`;
 }
-async function loadCurrentDividendCount(){
-  const now=new Date(), year=now.getFullYear(), month=now.getMonth()+1;
-  const count=document.getElementById('currentDividendCount'), note=document.getElementById('currentDividendCountNote');
-  if(!count)return;
-  try{
-    const r=await fetch(`${API_BASE}/api/dividends?year=${year}&month=${month}`);
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error||'取得失敗');
-    const n=Array.isArray(d.items)?d.items.length:0;
-    count.textContent=`${n.toLocaleString('ja-JP')}件`;
-    if(note)note.textContent=`${year}年${month}月の候補件数・クリックで該当銘柄を表示（未確認日は候補表示）`;
-  }catch(e){
-    count.textContent='—';
-    if(note)note.textContent='件数を取得できませんでした。';
-  }
-}
+async function loadCurrentDividendCount(){return window.stockExtras?.loadMonthlySummary();}
 function openCurrentDividendList(){
   const now=new Date();
   location.hash='#page-dividends';
@@ -2475,6 +2467,7 @@ function openPage(page, navItem) {
   if (item) item.classList.add("active");
 
   if (typeof trackEvent === "function") trackEvent("app_tab_view", { tab_name: page });
+  if (page === "earnings") window.stockExtras?.loadEarningsMonth();
   if (page === "fav") renderFavList();
   if (page === "rec") renderRecList();
   if (page === "movers") loadMovers();
@@ -2483,7 +2476,7 @@ function openPage(page, navItem) {
 }
 
 function pageFromHash() {
-  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|evaluation|help|widget-setup)$/);
+  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|earnings|evaluation|help|widget-setup)$/);
   if (m && m[1] === "widget-setup" && !IS_IPHONE) return "home";
   return m ? m[1] : "home";
 }
@@ -2610,6 +2603,7 @@ const detailQuoteCache=new Map();
 async function evaluateDetailStock(code) {
   const seq=++detailEvalSequence;
   loadDetailNews(code,seq);
+  window.stockExtras?.loadDetail(code,seq);
   const started=performance.now();
   const result=document.getElementById("detailEvaluationResult");
   const uxStatus=document.getElementById("detailEvaluationStatus");
@@ -3981,6 +3975,7 @@ async function loadMovers(force=false){
 // 初期表示
 renderFavList();
 </script>
+<script src="./stock_extras.js" defer></script>
 <script src="./news_client.js" defer></script>
 <script src="./signals_panel.js" defer></script>
 </body>

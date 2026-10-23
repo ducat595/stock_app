@@ -66,3 +66,5 @@ test('untrusted sources and missing redirect publisher metadata are not displaye
   assert.equal(context.window.stockNewsSourceAllowed({url:'https://news.google.com/rss/articles/id',sourceDomain:'finance.yahoo.co.jp'}),true);
   assert.equal(context.window.stockNewsSourceAllowed({url:'https://jp.reuters.com.evil.example/'}),false);
 });
+
+test('TDnet original PDF and search links are visible',()=>{const html=render({status:'ok',items:[{title:'業績上方修正',source:'TDnet（非公式API経由）',url:'https://www.release.tdnet.info/inbs/123.pdf',score:1,predictionEligible:true}]},escape);assert.match(html,/href="https:\/\/www.release.tdnet.info\/inbs\/123.pdf"/);assert.match(html,/https:\/\/tdnet-search.appspot.com\//);});
