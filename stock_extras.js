@@ -100,12 +100,16 @@
   }
   function searchEarningsMonth(){location.hash='#page-earnings-search';return loadEarningsMonth('month');}
   async function loadEarningsMonth(requestedMode){
-    const mode=requestedMode==='month'||location.hash==='#page-earnings-search'?'month':'window';
+    const mode=requestedMode==='month'||requestedMode==='idle-month'||location.hash==='#page-earnings-search'?'month':'window';
     const seq=++earningsSeq;earningsState=null;const box=document.getElementById('earningsMonthList');if(!box)return;
     const yearInput=document.getElementById('earningsSearchYear'),monthInput=document.getElementById('earningsSearchMonth'),current=jst();
     if(yearInput&&!yearInput.options.length){yearInput.innerHTML=Array.from({length:101},(_,i)=>`<option value="${2000+i}">${2000+i}年</option>`).join('');yearInput.value=String(current.year);}
     if(monthInput&&!monthInput.dataset.initialized){monthInput.value=String(current.month);monthInput.dataset.initialized='true';}
     const title=document.getElementById('earningsPageTitle');if(title)title.textContent=mode==='month'?'決算発表検索':'今日から2週間先の決算発表銘柄';
+    for(const id of ['earningsMonthForm','earningsMonthHelp']){const el=document.getElementById(id);if(el)el.hidden=mode!=='month';}
+    const status=document.getElementById('earningsPriceStatus');if(status)status.textContent='';
+    if(mode==='month'&&requestedMode!=='month'){box.innerHTML='<p>年と月を指定して「指定月で検索」を押してください。</p>';return;}
+
     box.textContent='決算発表予定を取得中…';
     try{
       let data;
