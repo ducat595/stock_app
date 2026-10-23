@@ -68,3 +68,9 @@ test('untrusted sources and missing redirect publisher metadata are not displaye
 });
 
 test('TDnet original PDF and search links are visible',()=>{const html=render({status:'ok',items:[{title:'業績上方修正',source:'TDnet（非公式API経由）',url:'https://www.release.tdnet.info/inbs/123.pdf',score:1,predictionEligible:true}]},escape);assert.match(html,/href="https:\/\/www.release.tdnet.info\/inbs\/123.pdf"/);assert.match(html,/https:\/\/tdnet-search.appspot.com\//);});
+
+test('TDnet Search documents are displayed and keep their original link',()=>{
+  const html=render({status:'ok',items:[{title:'業績予想の上方修正について',url:'https://tdnet-search.appspot.com/140120261023123456.pdf',source:'TDnet Search',score:1,predictionEligible:true}]},escape);
+  assert.match(html,/href="https:\/\/tdnet-search.appspot.com\/140120261023123456.pdf"/);
+  assert.match(html,/TDnet Search/);
+});
