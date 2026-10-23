@@ -1160,6 +1160,12 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
 #earningsMonthList .earnings-price-col{width:34%}
 #earningsMonthList .earnings-date-table th,#earningsMonthList .earnings-date-table td{overflow-wrap:anywhere;vertical-align:top}
 @media(max-width:600px){#earningsMonthList .earnings-code-col{width:20%}#earningsMonthList .earnings-name-col{width:43%}#earningsMonthList .earnings-price-col{width:37%}}
+.event-window-counts{display:grid;grid-template-columns:max-content minmax(7em,max-content);column-gap:20px;row-gap:5px;width:max-content;max-width:100%;align-items:center;font-size:.88rem}
+.event-window-counts .dividend-month-summary-title{display:contents}
+.event-window-counts .dividend-month-summary-title>span{justify-self:start;text-align:left;white-space:nowrap;font-weight:800;color:#405168}
+.event-window-counts .dividend-count-link{justify-self:stretch;justify-content:flex-end;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.event-window-counts .dividend-count-link:hover{transform:none}
+@media(max-width:600px){.event-window-counts{font-size:.8rem;column-gap:14px}.event-window-counts .dividend-count-link{font-size:1.05rem}}
 </style>
 </head>
 <body>
@@ -1173,9 +1179,11 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
   <div class="dividend-month-summary" aria-label="今日から2週間先">
     <div class="dividend-month-summary-inner"><div>
       <h2 style="font-size:1rem;margin:0 0 10px">今日から2週間先</h2>
-      <div class="dividend-month-summary-title">💰 配当権利確定銘柄 <a id="currentDividendCount" class="dividend-count-link" href="#page-upcoming-dividends">取得中…</a></div>
-      <div class="dividend-month-summary-title">🎁 優待権利確定銘柄 <a id="currentBenefitCount" class="dividend-count-link" href="#page-upcoming-benefits">取得中…</a></div>
-      <div class="dividend-month-summary-title">📅 決算発表銘柄 <a id="currentEarningsCount" class="dividend-count-link" href="#page-earnings">取得中…</a></div>
+      <div class="event-window-counts">
+      <div class="dividend-month-summary-title"><span>💰 配当権利確定銘柄</span><a id="currentDividendCount" class="dividend-count-link" href="#page-upcoming-dividends">取得中…</a></div>
+      <div class="dividend-month-summary-title"><span>🎁 優待権利確定銘柄</span><a id="currentBenefitCount" class="dividend-count-link" href="#page-upcoming-benefits">取得中…</a></div>
+      <div class="dividend-month-summary-title"><span>📅 決算発表銘柄</span><a id="currentEarningsCount" class="dividend-count-link" href="#page-earnings">取得中…</a></div>
+      </div>
       <p id="eventWindowNote" class="dividend-month-summary-note">今日から14日後までの予定を取得中です。</p>
     </div></div>
   </div>
