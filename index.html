@@ -1175,6 +1175,13 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
 @media(max-width:900px){.app-frame-layout{padding-left:10px;padding-right:10px}}
 @media(max-width:520px){.app-frame-layout{padding-left:8px;padding-right:8px}}
 #earningsMonthForm[hidden],#earningsMonthHelp[hidden]{display:none!important}
+.market-page-heading{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:24px;border-radius:18px;background:linear-gradient(120deg,#102b50,#174f87);color:#fff;margin-bottom:22px}
+.market-eyebrow{display:block;font-size:.7rem;font-weight:800;letter-spacing:.2em;color:#89cefa;margin-bottom:8px}.market-page-heading h2{color:#fff;margin:0}.market-page-heading h2::after{display:none}.market-page-heading p{font-size:.85rem;margin:8px 0 0;color:#ccdfef}.market-page-heading .btn{flex:none}
+.market-section{margin:22px 0}.market-section-heading{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}.market-section-heading h3{margin:0;color:#173a60}.market-section-heading span{font-size:.75rem;color:#708198}
+.market-tile-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.market-rates-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.market-tile{border:1px solid #dce6f0;background:linear-gradient(155deg,#fff,#f7faff);border-radius:14px;padding:16px;min-width:0;box-shadow:0 3px 10px #14365708}.market-tile-label{font-size:.85rem;font-weight:800;color:#294c6a}.market-tile-price{font-size:clamp(1.2rem,2.2vw,1.85rem);font-weight:850;letter-spacing:-.035em;margin:12px 0 7px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;color:#163858}.market-tile-price small{display:block;font-size:.66rem;letter-spacing:0;font-weight:600;margin-top:3px;color:#718197}.market-tile-change{font-size:.8rem;font-weight:800;min-height:1.6em}.market-up .market-tile-change{color:#128058}.market-down .market-tile-change{color:#c13f50}.market-flat .market-tile-change{color:#6d7f92}.market-tile-subtitle{font-size:.7rem;color:#718197;line-height:1.6;min-height:2.6em;margin:10px 0 5px}.market-tile-time{font-size:.66rem;color:#76879a;overflow-wrap:anywhere}.market-tile-source{display:inline-block;margin-top:8px;font-size:.65rem;color:#426e96}
+.market-fx-heading{padding-top:20px;border-top:1px solid #e2eaf2;letter-spacing:.1em}.market-fx-heading span{font-size:.8rem;letter-spacing:0;color:#728399;margin-left:10px}.market-news-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;align-items:start}.market-news-panel{min-width:0;margin:0!important}.market-news-panel>div{max-height:600px;overflow:auto;overscroll-behavior:contain}.market-news-panel .fx-news-item{padding:14px 0;border-bottom:1px solid #e1e9f2;line-height:1.65}.market-news-panel .fx-news-item a{color:#1c5588;font-weight:650;overflow-wrap:anywhere}.market-news-panel .muted{font-size:.72rem}.market-language-badge{display:inline-block;background:#e5f0fb;color:#32628f;padding:2px 7px;border-radius:5px;font-size:.65rem;margin-left:8px}.market-news-status{font-size:.75rem;color:#78899a}.market-help li{margin-bottom:9px;line-height:1.8}
+@media(max-width:900px){.market-rates-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.market-news-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.market-page-heading{padding:18px;align-items:stretch;flex-direction:column}.market-page-heading .btn{align-self:flex-start}.market-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.market-tile{padding:12px}.market-tile-price{font-size:1.3rem}.market-tile-label{font-size:.75rem}}
 </style>
 </head>
 <body>
@@ -1324,7 +1331,10 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
     <!-- 為替 -->
     <div id="page-fx" class="page">
       <div class="card">
-        <h2>💱 為替情報（米ドル/円）</h2>
+        <div class="market-page-heading"><div><span class="market-eyebrow">MARKET WATCH</span><h2>為替・マーケット情報</h2><p>日本と米国、株式から金利・商品まで。</p></div><button type="button" class="btn btn-secondary" onclick="stockMarketPanel.load(true)">市場情報を更新</button></div>
+        <div id="marketDashboard"><p class="loading">マーケット情報を取得中…</p></div>
+        <p id="marketDashboardStatus" class="muted"></p>
+        <h3 class="market-fx-heading">USD / JPY <span>米ドル・円</span></h3>
         <button class="btn btn-secondary btn-sm" onclick="loadFxPage(true)">🔄 最新情報を取得</button>
         <p id="fxStatus" class="muted"></p>
         <details class="fx-card" open>
@@ -1334,20 +1344,23 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
         </details>
         <details class="fx-card" open>
           <summary>為替チャート</summary>
-          <div class="tf-btns" style="margin-top:10px">
-            <button class="btn btn-secondary btn-sm" onclick="loadFxChart('minute')">分足</button>
-            <button class="btn btn-secondary btn-sm" onclick="loadFxChart('hour')">時間足</button>
-            <button class="btn btn-primary btn-sm" onclick="loadFxChart('day')">日足</button>
-            <button class="btn btn-secondary btn-sm" onclick="loadFxChart('week')">週足</button>
-            <button class="btn btn-secondary btn-sm" onclick="loadFxChart('month')">月足</button>
+          <div class="fx-chart-controls" style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:12px 0">
+            <label for="fxTimeframe">時間軸</label><select id="fxTimeframe" onchange="loadFxChart(this.value)" aria-label="為替チャートの時間軸"><option value="minute">分足</option><option value="hour">時間足</option><option value="day" selected>日足</option><option value="week">週足</option><option value="month">月足</option></select>
           </div>
           <div id="fxChartDiv"></div>
         </details>
-        <details class="fx-card" open>
+        <div class="market-news-grid">
+        <details class="fx-card market-news-panel" open>
           <summary>為替関連ニュース</summary>
           <button class="btn btn-secondary btn-sm" type="button" onclick="loadFxNews(true)" style="margin-top:10px">ニュースを再取得</button>
           <div id="fxNews"><p class="loading">ニュースを取得しています...</p></div>
         </details>
+        <details class="fx-card market-news-panel" open>
+          <summary>米国市場ニュース<span class="market-language-badge">日本語</span></summary>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="stockMarketPanel.load(true)" style="margin-top:10px">ニュースを再取得</button>
+          <div id="usMarketNews"><p class="loading">米国市場ニュースを取得しています…</p></div>
+        </details>
+        </div>
       </div>
     </div>
 
@@ -1511,6 +1524,23 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
     <div id="page-help" class="page">
       <div class="card">
         <h2>❓ 使い方</h2><p>v57では詳細評価の要約表示・分析根拠の折りたたみ・処理状況の表示・小画面でのメニュー操作を改善しました。予測・履歴保存・カレンダー登録の仕組みは従来どおりです。</p>
+        <section class="market-help" aria-labelledby="market-help-title">
+          <h3 id="market-help-title">為替・マーケット情報の見方</h3>
+          <p>為替チャートの時間軸はプルダウンで分足・時間足・日足・週足・月足を選べます。情報を更新しても選択を維持します。</p>
+          <p>指標は配信時刻の値です。日本と米国では取引時間が異なり、無料配信には遅延もあります。休日や引け後は直近の値を表示します。取得が一時的に失敗した場合は取得済みデータを時刻付きで表示し、「前回取得」と明示します。</p>
+          <ul>
+            <li><strong>日経平均・TOPIX：</strong>日本株市場の動きを表す指数です。日経平均は225銘柄、TOPIXは東証株価指数です。TOPIXの配信元が日付を返さない場合は、その旨を時刻欄に表示します。</li>
+            <li><strong>日経平均先物：</strong>CMEの円建て期近先物です。大阪取引所の先物とは取引市場・時間・価格が異なります。期近限月の切り替わりにも注意してください。</li>
+            <li><strong>NYダウ・NASDAQ総合・S&amp;P 500：</strong>米国株の主要指数です。NYダウは主要30銘柄、NASDAQ総合はNASDAQ市場全体、S&amp;P 500は米国の主要約500社を対象とします。</li>
+            <li><strong>日米の10年・30年国債：</strong>表示値は債券価格ではなく年率の利回り（％）です。一般に利回りの上昇は債券価格の下落を意味します。日本は財務省の最新公表金利で、リアルタイムの新発債利回りではありません。</li>
+            <li><strong>国債の前回比：</strong>％ポイントで表示します。例えば利回り3.0％から3.1％は＋0.1％ポイントです。日本国債は前回公表比、他の指標は配信元の前日基準との比較です。</li>
+            <li><strong>VIX：</strong>S&amp;P 500のオプション価格から算出する、予想変動率の指標です。上昇は市場の不安定さへの警戒を示すことがありますが、株価の上下を直接予測するものではありません。</li>
+            <li><strong>WTI原油・金先物：</strong>原油はNYMEX、金はCOMEXの期近先物です。米ドル建てで、原油は1バレル、金は1トロイオンス当たりの値を表示します。</li>
+          </ul>
+          <p>緑の↗は前回比プラス、赤の↘はマイナスです。良し悪しや売買の推奨を示す色ではありません。</p>
+          <p><strong>為替・米国市場ニュース：</strong>外為どっとコム、OANDA、Googleニュースの公開RSSから、関連する日本語の見出しを取得します。直近7日分を新しい順に最大30件ずつ表示し、重複を除きます。原文は各リンクから確認できます。本文全体の分析や、ニュースの網羅性・即時性を保証するものではありません。通信障害時は取得済み記事を使い、7日を過ぎた記事は表示しません。</p>
+          <p>指標はYahoo Finance、TOPIXはYahoo!ファイナンス、日本国債は<a href="https://www.mof.go.jp/jgbs/reference/interest_rate/index.htm" target="_blank" rel="noopener noreferrer">財務省の国債金利情報</a>を利用します。この画面に追加した指標・米国市場ニュースは参考表示で、個別銘柄の予想価格への新しい加算補正は行っていません。</p>
+        </section>
         <section class="iphone-widget-only" aria-labelledby="iphone-widget-help-title">
           <h3 id="iphone-widget-help-title">iPhone向け：ホーム画面ウィジェット</h3>
           <p>iPhoneでは、Scriptableを使ってお気に入り銘柄をホーム画面に表示できます。Android、Windows、Macにはこの機能の入口は表示されません。</p>
@@ -3392,6 +3422,7 @@ let fxLoadedAt = 0;
 let fxNewsLoadPromise = null;
 let fxLoadPromise = null;
 async function loadFxPage(force = false) {
+  window.stockMarketPanel?.load(force);
   if (fxLoadPromise) return fxLoadPromise;
   if (fxLoaded && !force && Date.now()-fxLoadedAt<300000) return;
   fxLoadPromise = (async () => {
@@ -3421,7 +3452,7 @@ async function loadFxPage(force = false) {
       quoteBox.innerHTML = `<div class="fx-rate">${price.toLocaleString("ja-JP", {minimumFractionDigits: 3, maximumFractionDigits: 3})} 円</div>
         <div class="${rateClass}">前日比 ${q.change != null ? `${q.change >= 0 ? "+" : ""}${Number(q.change).toFixed(3)}円` : "—"} (${change != null ? `${change >= 0 ? "+" : ""}${Number(change).toFixed(2)}%` : "—"})</div>
         <p><b>今後の円高・円安の方向感（直近約5営業日ベース）</b><br>${outlook}</p><p class="muted">直近の傾向をもとにした参考コメントです。将来の値動きを保証するものではありません。データ時刻: ${asOf}</p>`;
-      await loadFxChart("day");
+      await loadFxChart(document.getElementById("fxTimeframe")?.value||"day");
       fxLoaded = true;fxLoadedAt=Date.now();
       status.textContent = "更新しました";
     } catch (error) {
@@ -3480,12 +3511,7 @@ async function loadFxChart(timeframe) {
     return;
   }
 
-  // 選択中の時間足ボタンを明示
-  document.querySelectorAll("#page-fx .tf-btns button").forEach(btn => {
-    const selected = btn.getAttribute("onclick")?.includes(`'${timeframe}'`);
-    btn.classList.toggle("btn-primary", !!selected);
-    btn.classList.toggle("btn-secondary", !selected);
-  });
+  const timeframeSelect=document.getElementById('fxTimeframe');if(timeframeSelect)timeframeSelect.value=timeframe;
 
   // 前回のPlotly描画サイズを残さない
   try { Plotly.purge(chart); } catch(e) {}
@@ -4088,6 +4114,7 @@ async function loadMovers(force=false){
 // 初期表示
 renderFavList();
 </script>
+<script src="./market_panel.js?v=20261023-1" defer></script>
 <script src="./menu_scroll.js?v=20261023-1" defer></script>
 <script src="./stock_extras.js?v=20261023-earnings-month-3" defer></script>
 <script src="./news_client.js" defer></script>

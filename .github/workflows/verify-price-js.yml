@@ -37,4 +37,5 @@ jobs:
           node --check news_client.js
           node --check stock_extras.js
           node --check menu_scroll.js
+          node --check market_panel.js
           node --test tests/*.test.cjs
