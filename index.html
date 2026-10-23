@@ -1167,6 +1167,7 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
     <a href="#page-benefits" data-page="benefits" class="">🎁 株主優待検索</a>
     <a href="#page-dividends" data-page="dividends" class="">💰 配当検索</a>
     <a href="#page-evaluation" data-page="evaluation" class="">📊 株価の評価方法</a>
+    <a href="#page-reference-sites" data-page="reference-sites">🔗 株式関連参考サイト</a>
     <a href="#page-help" data-page="help" class="">❓ヘルプ</a>
   </nav>
   <div class="container">
@@ -1423,6 +1424,22 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
         <div class="msg-info" style="padding:12px 14px;border-radius:8px;margin-top:16px">
           <b>重要：</b>ここに記載した基準は一般的な参考情報であり、将来の株価上昇や利益を保証するものではありません。企業の決算、業績予想、ニュース、市場環境、金利、為替なども確認し、最終的な投資判断はご自身で行ってください。
         </div>
+      </div>
+    </div>
+
+    <div id="page-reference-sites" class="page">
+      <div class="card">
+        <h2>🔗 株式関連参考サイト</h2>
+        <p>株価・決算・適時開示を調べるためのリンク集です。リンクは別のタブで開きます。</p>
+        <ul style="display:grid;gap:18px;padding-left:24px;overflow-wrap:anywhere">
+          <li><a href="https://www.jpx.co.jp/listing/disclosure/index.html" target="_blank" rel="noopener noreferrer"><strong>TDnet 適時開示情報閲覧サービス</strong></a><br>企業が発表する決算短信、業績予想の修正などの適時開示を確認できます。</li>
+          <li><a href="https://www.jpx.co.jp/" target="_blank" rel="noopener noreferrer"><strong>JPX 日本取引所グループ</strong></a><br>取引所の公式情報や、市場・上場会社に関する情報を確認できます。</li>
+          <li><a href="https://tdnet-search.appspot.com/" target="_blank" rel="noopener noreferrer"><strong>TDnetSearch（TDnet Search）</strong></a><br>適時開示情報を検索できる民間サービスです。</li>
+          <li><a href="https://tdnet-search.appspot.com/analyze" target="_blank" rel="noopener noreferrer"><strong>TDnetSearch 分析ページ</strong></a><br>TDnetSearchの分析画面を開きます。</li>
+          <li><a href="https://disclosure2.edinet-fsa.go.jp/" target="_blank" rel="noopener noreferrer"><strong>EDINET（金融庁）</strong></a><br>有価証券報告書などの開示書類を検索・閲覧できます。</li>
+          <li><a href="https://jpx-jquants.com/ja" target="_blank" rel="noopener noreferrer"><strong>J-Quants</strong></a><br>日本株の株価や財務情報などを取得するためのサービスです。</li>
+          <li><a href="https://finance.yahoo.co.jp/" target="_blank" rel="noopener noreferrer"><strong>Yahoo!ファイナンス</strong></a><br>株価・チャート・企業情報・株式関連ニュースを確認できます。</li>
+        </ul>
       </div>
     </div>
 
@@ -2476,7 +2493,7 @@ function openPage(page, navItem) {
 }
 
 function pageFromHash() {
-  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|earnings|evaluation|help|widget-setup)$/);
+  const m = location.hash.match(/^#page-(home|detail|fav|check|fx|rec|movers|benefits|dividends|earnings|evaluation|reference-sites|help|widget-setup)$/);
   if (m && m[1] === "widget-setup" && !IS_IPHONE) return "home";
   return m ? m[1] : "home";
 }
