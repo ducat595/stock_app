@@ -4,7 +4,7 @@
     const clock=options.now||Date.now,fetcher=options.fetch||((...args)=>window.fetch(...args));
     let storage=options.storage;
     if(storage===undefined){try{storage=window.sessionStorage;}catch{storage=null;}}
-    const key='stockNewsCacheV3',cache=new Map(),pending=new Map(),maxAge=30*60*1000;
+    const key='stockNewsCacheV3',cache=new Map(),pending=new Map(),maxAge=24*60*60*1000;
     try{
       const saved=JSON.parse(storage?.getItem(key)||'[]');
       if(Array.isArray(saved))for(const [symbol,entry] of saved){
@@ -30,7 +30,7 @@
         if(!response.ok)throw new Error('news');
         const data=await response.json();
         if(!Array.isArray(data?.items)||!['ok','empty','partial','error'].includes(data.status))throw new Error('invalid news');
-        if(data.status==='error')throw new Error('news upstream');
+        if(data.status==='error'||(data.status==='partial'&&!data.items.length))throw new Error('news upstream');
         remember(symbol,data);return data;
       }).finally(()=>{clearTimeout(timeout);pending.delete(symbol);});
       pending.set(symbol,promise);return promise;

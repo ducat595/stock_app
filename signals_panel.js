@@ -60,7 +60,7 @@ window.stockNewsHtml=function(data,esc){
   const scoreOf=item=>item.score!=null&&Number.isFinite(Number(item.score))?Number(item.score):-Infinity;
   items.sort((a,b)=>scoreOf(b)-scoreOf(a)||(new Date(b.publishedAt).getTime()||0)-(new Date(a.publishedAt).getTime()||0));
   const state=data?.status||'unavailable';
-  const messages={loading:'ニュースを取得しています…',error:'ニュースの取得に失敗しました。時間をおいて再試行してください。',partial:'一部の取得先で失敗しました。取得できた関連ニュースを表示しています。',empty:'過去2週間の関連ニュースは見つかりませんでした。',unavailable:'ニュース機能の更新待ち、または取得状態が不明です。',ok:'銘柄コード・会社名で取得した関連ニュースです。'};
+  const messages={loading:'ニュースを取得しています…',error:'ニュースの取得に失敗しました。時間をおいて再試行してください。',partial:items.length?`関連ニュースを${items.length}件取得しました。一部の配信元は応答していません。`:'一部の配信元から取得できませんでした。ニュースを再取得してください。',empty:'過去2週間の関連ニュースは見つかりませんでした。',unavailable:'ニュース機能の更新待ち、または取得状態が不明です。',ok:'銘柄コード・会社名で取得した関連ニュースです。'};
   const signed=(v,dp=3)=>{const n=Number(v);return v!=null&&Number.isFinite(n)?(n>0?'+':'')+n.toFixed(dp):'—';};
   const badge=(score,label)=>{const n=Number(score),color=n>0?'#137333':n<0?'#c5221f':'#5f6368',background=n>0?'#e6f4ea':n<0?'#fce8e6':'#f1f3f4';return `<span class="news-score" data-direction="${n>0?'up':n<0?'down':'neutral'}" style="display:inline-block;padding:4px 8px;border-radius:8px;color:${color};background:${background};font-weight:700">${safe(label)} ${safe(signed(score,2))}</span>`;};
   const impact=effect?`<p style="font-size:12px">判定対象 ${Number(effect.eligibleCount)||0}件 ／ ${badge(effect.score,'総合スコア')}（−1～+1） ／ 予想騰落率への補正 ${safe(signed(effect.adjustmentPct))}%ポイント</p>`:'';

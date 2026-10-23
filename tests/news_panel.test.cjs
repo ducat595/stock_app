@@ -19,7 +19,7 @@ test('news renders without a forecast or feature signals',()=>{
 test('display-only articles and fetch failures are distinct',()=>{
   assert.match(render({status:'empty',items:[]},escape),/見つかりませんでした/);
   assert.match(render({status:'error',items:[]},escape),/取得に失敗/);
-  assert.match(render({status:'partial',items:[]},escape),/一部の取得先/);
+  assert.match(render({status:'partial',items:[]},escape),/一部の配信元/);
   assert.match(render({status:'loading',items:[]},escape),/取得しています/);
   assert.match(render({status:'ok',items:[{title:'古い記事',predictionEligible:false,url:'https://jp.reuters.com/old'}]},escape),/掲載後72時間超/);
 });

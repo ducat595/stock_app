@@ -46,3 +46,11 @@ test('blocked storage does not prevent news fetching',async()=>{
   const client=create({storage:{getItem:()=>{throw Error('blocked')},setItem:()=>{throw Error('full')}},fetch:async()=>response(news)});
   const result=await client.load('7203.T','/news',()=>{});assert.equal(result.items.length,1);
 });
+
+test('a partial empty refresh cannot erase previously displayed articles',async()=>{
+  let now=1000,partial=false;
+  const client=create({now:()=>now,storage:null,fetch:async()=>response(partial?{status:'partial',items:[]}:news)});
+  await client.load('8136.T','/news',()=>{});now+=6*3600000;partial=true;
+  const states=[];await client.load('8136.T','/news',x=>states.push(x));
+  assert.equal(states.at(-1).items.length,1);assert.equal(states.at(-1).refreshFailed,true);
+});
