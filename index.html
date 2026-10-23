@@ -1166,6 +1166,10 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
 .event-window-counts .dividend-count-link{justify-self:stretch;justify-content:flex-end;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .event-window-counts .dividend-count-link:hover{transform:none}
 @media(max-width:600px){.event-window-counts{font-size:.8rem;column-gap:14px}.event-window-counts .dividend-count-link{font-size:1.05rem}}
+/* Match desktop frames to the main content container. */
+@media(min-width:901px){
+  .dividend-month-summary,.menu-scroll-shell,.menu-scroll-hint{max-width:1240px;padding-left:18px;padding-right:18px}
+}
 </style>
 </head>
 <body>
