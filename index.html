@@ -1790,17 +1790,40 @@ function loadFavs() {
   }
   return JSON.parse(JSON.stringify(DEFAULT_FAVS));
 }
+// Local token is generated once per browser installation. Never publish it in the repo.
+const WIDGET_TOKEN_KEY = "jp_stock_widget_token_v1";
+function widgetToken() {
+  let token = localStorage.getItem(WIDGET_TOKEN_KEY);
+  if (!/^[a-f0-9]{64}$/.test(token || "")) {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    token = Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+    localStorage.setItem(WIDGET_TOKEN_KEY, token);
+  }
+  return token;
+}
+async function syncWidgetFavorites(list) {
+  const response = await fetch(`${API_BASE}/api/widget/favorites`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "X-Widget-Token": widgetToken()},
+    body: JSON.stringify({favorites: list})
+  });
+  if (!response.ok) throw new Error("HTTP " + response.status);
+}
 function saveFavs(list) {
   try {
     const json = JSON.stringify(list);
     localStorage.setItem(FAV_STORAGE_KEY, json);
-    // 最新のお気に入りを既定バックアップとして自動保存
     localStorage.setItem(FAV_BACKUP_KEY, json);
+    syncWidgetFavorites(list).catch(e => console.warn("Widget sync failed:", e));
   } catch(e) {
-    showMsg("お気に入りの保存に失敗しました（ブラウザの制限の可能性）", "err");
+    showMsg("お気に入りの保存に失敗しました", "err");
     console.warn(e);
   }
 }
+// Initial sync is required for favorites that existed before this feature.
+// Copy the pairing key once into Scriptable CONFIG.widgetToken.
+window.widgetSyncKey = () => widgetToken();
+window.syncWidgetNow = () => syncWidgetFavorites(loadFavs());
 
 function downloadFavoritesBackup(list) {
   try {
