@@ -1345,6 +1345,7 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
         </details>
         <details class="fx-card" open>
           <summary>為替関連ニュース</summary>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="loadFxNews(true)" style="margin-top:10px">ニュースを再取得</button>
           <div id="fxNews"><p class="loading">ニュースを取得しています...</p></div>
         </details>
       </div>
@@ -3387,25 +3388,23 @@ function valuationLabel(target, price) {
 
 // ========== 為替情報 ==========
 let fxLoaded = false;
+let fxLoadedAt = 0;
+let fxNewsLoadPromise = null;
 let fxLoadPromise = null;
 async function loadFxPage(force = false) {
   if (fxLoadPromise) return fxLoadPromise;
-  if (fxLoaded && !force) return;
+  if (fxLoaded && !force && Date.now()-fxLoadedAt<300000) return;
   fxLoadPromise = (async () => {
     const status = document.getElementById("fxStatus");
     const quoteBox = document.getElementById("fxQuote");
     const newsBox = document.getElementById("fxNews");
     status.textContent = "為替情報を取得しています...";
     quoteBox.innerHTML = `<p class="loading">レート取得中...</p>`;
-    newsBox.innerHTML = `<p class="loading">ニュース取得中...</p>`;
+    const newsTask=loadFxNews(force);
     try {
-      const [quoteRes, newsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/fx/quote`),
-        fetch(`${API_BASE}/api/fx/news`)
-      ]);
+      const quoteRes=await fetch(`${API_BASE}/api/fx/quote`);
       if (!quoteRes.ok) throw new Error(`レート取得に失敗しました (HTTP ${quoteRes.status})`);
       const q = await quoteRes.json();
-      const n = newsRes.ok ? await newsRes.json() : {news: []};
       const price = Number(q.price);
       const change = q.changePercent;
       const rateClass = q.change > 0 ? "value-positive" : (q.change < 0 ? "value-negative" : "");
@@ -3422,15 +3421,14 @@ async function loadFxPage(force = false) {
       quoteBox.innerHTML = `<div class="fx-rate">${price.toLocaleString("ja-JP", {minimumFractionDigits: 3, maximumFractionDigits: 3})} 円</div>
         <div class="${rateClass}">前日比 ${q.change != null ? `${q.change >= 0 ? "+" : ""}${Number(q.change).toFixed(3)}円` : "—"} (${change != null ? `${change >= 0 ? "+" : ""}${Number(change).toFixed(2)}%` : "—"})</div>
         <p><b>今後の円高・円安の方向感（直近約5営業日ベース）</b><br>${outlook}</p><p class="muted">直近の傾向をもとにした参考コメントです。将来の値動きを保証するものではありません。データ時刻: ${asOf}</p>`;
-      renderFxNews(n.news || []);
       await loadFxChart("day");
-      fxLoaded = true;
+      fxLoaded = true;fxLoadedAt=Date.now();
       status.textContent = "更新しました";
     } catch (error) {
       quoteBox.innerHTML = `<p class="value-negative">為替情報を取得できませんでした: ${escapeHtml(error.message)}</p>`;
-      newsBox.innerHTML = `<p class="muted">ニュースを取得できませんでした。</p>`;
       status.textContent = "取得に失敗しました。しばらくして再取得してください。";
     } finally {
+      await newsTask;
       fxLoadPromise = null;
     }
   })();
@@ -3441,10 +3439,33 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 }
 
-function renderFxNews(items) {
+function recentFxNews(items){return (Array.isArray(items)?items:[]).filter(x=>{const t=Date.parse(x.published);return Number.isFinite(t)&&Date.now()-t>=0&&Date.now()-t<=7*86400000;});}
+function loadFxNews(force=false){
+  if(fxNewsLoadPromise)return fxNewsLoadPromise;
+  fxNewsLoadPromise=Promise.resolve().then(async()=>{
+    const box=document.getElementById('fxNews');let saved=null;
+    try{saved=JSON.parse(sessionStorage.getItem('fxNewsCacheV1')||'null');}catch{}
+    const previous=recentFxNews(saved?.news);
+    if(previous.length)renderFxNews(previous,{status:'cached'});else box.innerHTML='<p class="loading">ニュース取得中...</p>';
+    if(!force&&previous.length&&Date.now()-saved.at<300000)return;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);
+    try{
+      const response=await fetch(`${API_BASE}/api/fx/news`,{signal:controller.signal,cache:'no-store'});
+      if(!response.ok)throw new Error('news fetch failed');
+      const data=await response.json(),items=recentFxNews(data.news);
+      if(['error','partial'].includes(data.status)&&!items.length)throw new Error('all sources failed');
+      renderFxNews(items,data);
+      if(items.length){try{sessionStorage.setItem('fxNewsCacheV1',JSON.stringify({at:Date.now(),news:items}));}catch{}}
+    }catch{renderFxNews(previous,{status:previous.length?'cached-error':'error'});}
+    finally{clearTimeout(timer);}
+  }).finally(()=>{fxNewsLoadPromise=null;});return fxNewsLoadPromise;
+}
+
+function renderFxNews(items,meta={}) {
   const box = document.getElementById("fxNews");
-  if (!items.length) { box.innerHTML = `<p class="muted">現在表示できるニュースがありません。</p>`; return; }
-  box.innerHTML = items.map(item => {
+  if (!items.length) { box.innerHTML = meta.status==='error'?'<p class="muted">配信元からニュースを取得できていません。「ニュースを再取得」で再試行できます。</p>':'<p class="muted">取得できた配信元では、直近7日間の為替関連ニュースが見つかりませんでした。</p>'; return; }
+  const note=meta.status==='cached-error'?'通信が不安定なため、取得済みのニュースを表示しています。':meta.status==='cached'?'取得済みのニュースを表示しています。':meta.status==='partial'?'一部の配信元が応答していません。取得できたニュースを表示しています。':'直近7日間の為替関連ニュースです。';
+  box.innerHTML = `<p class="muted">${note}</p>`+items.map(item => {
     const date = item.published ? new Date(item.published).toLocaleString("ja-JP", {dateStyle: "short", timeStyle: "short"}) : "";
     const safeLink = /^https:\/\//i.test(item.link || "") ? item.link : "#";
     return `<div class="fx-news-item"><a href="${escapeHtml(safeLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a><div class="muted">${escapeHtml(item.source || "ニュース")}${date ? ` ・ ${date}` : ""}</div></div>`;
