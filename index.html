@@ -1821,9 +1821,21 @@ function saveFavs(list) {
   }
 }
 // Initial sync is required for favorites that existed before this feature.
-// Copy the pairing key once into Scriptable CONFIG.widgetToken.
 window.widgetSyncKey = () => widgetToken();
 window.syncWidgetNow = () => syncWidgetFavorites(loadFavs());
+
+async function createWidgetPairing() {
+  const response = await fetch(`${API_BASE}/api/widget/pairings`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "X-Widget-Token": widgetToken()},
+    body: "{}"
+  });
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok || !/^[A-Za-z0-9_-]{32,128}$/.test(json.code || "")) {
+    throw new Error(json.error || "ペアリングの準備に失敗しました");
+  }
+  return json.code;
+}
 
 window.addEventListener("DOMContentLoaded", () => {
   const button = document.createElement("button");
@@ -1833,13 +1845,15 @@ window.addEventListener("DOMContentLoaded", () => {
   button.onclick = async () => {
     try {
       await window.syncWidgetNow();
-      const key = widgetToken();
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(key);
-        alert("お気に入りを同期しました。同期キーをコピーしました。Scriptableの CONFIG.widgetToken に一度だけ貼り付けてください。");
-      } else {
-        prompt("Scriptableの CONFIG.widgetToken に貼り付ける同期キー", key);
-      }
+      const code = await createWidgetPairing();
+      // Only a short-lived, single-use code is placed in the handoff URL. The
+      // long-lived widget token remains in this browser and is never logged or
+      // exposed in the URL.
+      const url = "https://open.scriptable.app/run/" + encodeURIComponent("日本株チェッカー") +
+        "?pair=" + encodeURIComponent(code);
+      const opened = window.open(url, "_blank", "noopener");
+      if (!opened) location.href = url;
+      alert("Scriptableを開きました。初回だけ「日本株チェッカー」スクリプトを追加してから、もう一度このボタンを押してください。同期キーのコピーや貼り付けは不要です。");
     } catch(e) {
       alert("同期できませんでした: " + e.message + "。Renderの設定とSupabaseのテーブルを確認してください。");
     }

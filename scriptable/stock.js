@@ -14,7 +14,7 @@ const CONFIG = {
  title: "日本株チェッカー",
  appURL: "https://ducat595.github.io/stock_app/",
  refreshMinutes: 15,
- widgetToken: "", // Webアプリの widgetSyncKey() で取得した64文字のキーを一度だけ入力
+ widgetToken: "", // 旧方式との互換用。新規セットアップでは Keychain に保存される
  syncURL: "https://stock-app-api-ducat595.onrender.com/api/widget/favorites",
 
  // 表示する銘柄（仮登録）
@@ -22,6 +22,7 @@ const CONFIG = {
 };
 
 const fm = FileManager.local();
+const TOKEN_KEYCHAIN_KEY = "jp_stock_widget_token_v1";
 const cachePath = fm.joinPath(
  fm.documentsDirectory(),
  "japan_stock_widget_cache.json"
@@ -120,11 +121,13 @@ async function fetchStock(stock) {
 async function loadFavorites() {
  const path = fm.joinPath(fm.documentsDirectory(), "stock_favorites.json");
  let list = null;
- if (/^[a-f0-9]{64}$/.test(CONFIG.widgetToken)) {
+ const token = await acceptPairingCode() || (Keychain.contains(TOKEN_KEYCHAIN_KEY)
+  ? Keychain.get(TOKEN_KEYCHAIN_KEY) : CONFIG.widgetToken);
+ if (/^[a-f0-9]{64}$/.test(token)) {
   try {
    const req = new Request(CONFIG.syncURL);
    req.timeoutInterval = 12;
-   req.headers = {"X-Widget-Token": CONFIG.widgetToken};
+   req.headers = {"X-Widget-Token": token};
    const json = await req.loadJSON();
    if (!Array.isArray(json.favorites)) throw new Error("favorites missing");
    list = json.favorites;
@@ -143,6 +146,25 @@ async function loadFavorites() {
  return list.filter(s => s && s.code).map(s => ({
   code: String(s.code), name: String(s.name || s.code)
  }));
+}
+
+async function acceptPairingCode() {
+ const code = String(args.queryParameters?.pair || "");
+ if (!/^[A-Za-z0-9_-]{32,128}$/.test(code)) return null;
+ const req = new Request(CONFIG.syncURL.replace("/favorites", "/pairings/exchange"));
+ req.method = "POST";
+ req.timeoutInterval = 12;
+ req.headers = {"Content-Type": "application/json"};
+ req.body = JSON.stringify({code: code});
+ try {
+  const json = await req.loadJSON();
+  if (!/^[a-f0-9]{64}$/.test(json.token || "")) throw new Error("invalid pairing response");
+  Keychain.set(TOKEN_KEYCHAIN_KEY, json.token);
+  return json.token;
+ } catch (e) {
+  console.log("Widget pairing failed: " + e);
+  return null;
+ }
 }
 async function getStocks() {
  const cache = loadCache();
