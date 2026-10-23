@@ -2592,7 +2592,15 @@ function loadDetailNews(code, seq, force=false) {
   const render=data=>{
     if(seq!==detailEvalSequence)return;
     box.innerHTML=typeof window.stockNewsHtml==='function'?window.stockNewsHtml(data,escapeHtml):'<p>ニュース表示機能を読み込めませんでした。ページを再読み込みしてください。</p>';
-    if(data.status!=='loading'){const retry=document.createElement('button');retry.type='button';retry.className='btn btn-secondary btn-sm';retry.textContent='ニュースを再取得';retry.disabled=!!data.refreshing;retry.addEventListener('click',()=>loadDetailNews(code,seq,true));box.appendChild(retry);}
+    const actions=document.createElement('div');actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center';
+    if(data.status!=='loading'){const retry=document.createElement('button');retry.type='button';retry.className='btn btn-secondary btn-sm';retry.textContent='ニュースを再取得';retry.disabled=!!data.refreshing;retry.addEventListener('click',()=>loadDetailNews(code,seq,true));actions.appendChild(retry);}
+    const stockCode=String(code).replace(/\.T$/i,'').toUpperCase();
+    if(/^(?:[0-9]{4}|[0-9]{3}[A-Z])$/.test(stockCode)){
+      const tdnet=document.createElement('a');tdnet.className='btn btn-secondary btn-sm';tdnet.textContent='TDnet 検索';
+      tdnet.href='https://tdnet-search.appspot.com/search?query='+encodeURIComponent('code:'+stockCode+'0');
+      tdnet.target='_blank';tdnet.rel='noopener noreferrer';tdnet.title=stockCode+'の適時開示を期間指定なしで一覧表示';actions.appendChild(tdnet);
+    }
+    box.appendChild(actions);
   };
   const symbol=String(code).replace(/\.T$/i,'').toUpperCase()+'.T';
   if(!window.stockNewsClient){render({status:'error',items:[]});return;}
