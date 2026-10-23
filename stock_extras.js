@@ -102,14 +102,17 @@
   async function loadEarningsMonth(requestedMode){
     const mode=requestedMode==='month'||location.hash==='#page-earnings-search'?'month':'window';
     const seq=++earningsSeq;earningsState=null;const box=document.getElementById('earningsMonthList');if(!box)return;
-    const input=document.getElementById('earningsSearchMonth');if(input&&!input.value)input.value=todayIso().slice(0,7);
+    const yearInput=document.getElementById('earningsSearchYear'),monthInput=document.getElementById('earningsSearchMonth'),current=jst();
+    if(yearInput&&!yearInput.options.length){yearInput.innerHTML=Array.from({length:101},(_,i)=>`<option value="${2000+i}">${2000+i}年</option>`).join('');yearInput.value=String(current.year);}
+    if(monthInput&&!monthInput.dataset.initialized){monthInput.value=String(current.month);monthInput.dataset.initialized='true';}
     const title=document.getElementById('earningsPageTitle');if(title)title.textContent=mode==='month'?'決算発表検索':'今日から2週間先の決算発表銘柄';
     box.textContent='決算発表予定を取得中…';
     try{
       let data;
       if(mode==='month'){
-        const value=input?.value||todayIso().slice(0,7);if(!/^20\d{2}-\d{2}$/.test(value))throw new Error('検索する年月を指定してください。');
-        const [year,month]=value.split('-').map(Number);if(month<1||month>12)throw new Error('検索する年月を指定してください。');
+        const year=Number(yearInput?.value),month=Number(monthInput?.value);
+        if(!Number.isInteger(year)||year<2000||year>2100||!Number.isInteger(month)||month<1||month>12)throw new Error('検索する年と月を指定してください。');
+        const value=`${year}-${String(month).padStart(2,'0')}`;
         const response=await get(`/api/events/month?year=${year}&month=${month}&kind=earnings`,3600000);
         data={...response,start:value+'-01',end:new Date(Date.UTC(year,month,0)).toISOString().slice(0,10)};
       }else data=await get(windowPath('earnings'),3600000);

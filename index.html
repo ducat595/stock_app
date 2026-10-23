@@ -1376,7 +1376,8 @@ html.iphone-device .iphone-widget-page.active,html.iphone-device .iphone-widget-
     <div id="page-upcoming-benefits" class="page"><div class="card"><h2>今日から2週間先の優待権利確定銘柄</h2><div id="upcoming-benefitsList"></div></div></div>
     <div id="page-earnings" class="page"><div class="card"><h2 id="earningsPageTitle">決算発表検索</h2>
       <form id="earningsMonthForm" class="form-row" onsubmit="event.preventDefault();stockExtras.searchEarningsMonth()">
-        <label>決算発表月<input id="earningsSearchMonth" type="month" required style="min-width:180px"></label>
+        <label for="earningsSearchYear">年<select id="earningsSearchYear" required style="min-width:120px" aria-label="決算発表年"></select></label>
+        <label for="earningsSearchMonth">月<select id="earningsSearchMonth" required style="min-width:100px" aria-label="決算発表月"><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></label>
         <button class="btn btn-primary" type="submit">指定月で検索</button>
       </form>
       <p class="muted">JPXの掲載済み予定を検索します。指定月の過去日も対象です。未掲載の月は取得できません。</p>
@@ -4065,7 +4066,7 @@ async function loadMovers(force=false){
 renderFavList();
 </script>
 <script src="./menu_scroll.js?v=20261023-1" defer></script>
-<script src="./stock_extras.js?v=20261023-earnings-month-1" defer></script>
+<script src="./stock_extras.js?v=20261023-earnings-month-2" defer></script>
 <script src="./news_client.js" defer></script>
 <script src="./signals_panel.js" defer></script>
 </body>
