@@ -14,6 +14,8 @@ const CONFIG = {
  title: "日本株チェッカー",
  appURL: "https://ducat595.github.io/stock_app/",
  refreshMinutes: 15,
+ widgetToken: "", // Webアプリの widgetSyncKey() で取得した64文字のキーを一度だけ入力
+ syncURL: "https://stock-app-api-ducat595.onrender.com/api/widget/favorites",
 
  // 表示する銘柄（仮登録）
  stocks: []
@@ -116,27 +118,31 @@ async function fetchStock(stock) {
  };
 }
 async function loadFavorites() {
-  const fm = FileManager.iCloud();
-  const dir = fm.documentsDirectory();
-  const path = fm.joinPath(dir, "stock_favorites.json");
-
-  if (!fm.fileExists(path)) {
-    throw new Error("ファイルが見つかりません: " + path);
+ const path = fm.joinPath(fm.documentsDirectory(), "stock_favorites.json");
+ let list = null;
+ if (/^[a-f0-9]{64}$/.test(CONFIG.widgetToken)) {
+  try {
+   const req = new Request(CONFIG.syncURL);
+   req.timeoutInterval = 12;
+   req.headers = {"X-Widget-Token": CONFIG.widgetToken};
+   const json = await req.loadJSON();
+   if (!Array.isArray(json.favorites)) throw new Error("favorites missing");
+   list = json.favorites;
+   fm.writeString(path, JSON.stringify({favorites: list}));
+  } catch(e) {
+   console.log("Widget favorites sync failed; using local cache: " + e);
   }
-
-  await fm.downloadFileFromiCloud(path);
-
-  const json = JSON.parse(fm.readString(path));
-  const list = Array.isArray(json) ? json : json.favorites;
-
-  if (!Array.isArray(list)) {
-    throw new Error("JSONにfavoritesがありません");
-  }
-
-  return list.map(s => ({
-    code: String(s.code),
-    name: String(s.name || s.code)
-  }));
+ }
+ if (!list && fm.fileExists(path)) {
+  const saved = JSON.parse(fm.readString(path));
+  list = Array.isArray(saved) ? saved : saved.favorites;
+ }
+ if (!Array.isArray(list)) {
+  throw new Error("お気に入り未同期です。Webアプリの同期キーを設定してください");
+ }
+ return list.filter(s => s && s.code).map(s => ({
+  code: String(s.code), name: String(s.name || s.code)
+ }));
 }
 async function getStocks() {
  const cache = loadCache();
