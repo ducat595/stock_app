@@ -57,8 +57,8 @@
     try{
       const data=await get(`/api/events/month?year=${year}&month=${month}&kind=earnings`,3600000);if(seq!==earningsSeq)return;
       const unique=new Map();for(const item of data.items||[]){const row=unique.get(item.code)||{...item,dates:[]};if(!row.dates.includes(item.date))row.dates.push(item.date);unique.set(item.code,row);}
-      box.innerHTML=`<p>${year}年${month}月：JPX掲載分 ${unique.size}銘柄。${esc(data.note||'取得範囲には限りがあります。')}</p>${data.status==='error'?'<p>予定表の取得に失敗しました。</p>':`<div style="overflow:auto"><table><thead><tr><th>予定日</th><th>コード</th><th>銘柄</th><th>詳細</th></tr></thead><tbody>${[...unique.values()].map(x=>`<tr><td>${x.dates.map(esc).join(' ／ ')}</td><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td><button class="btn btn-secondary btn-sm" data-earnings-code="${esc(x.code)}">詳細評価</button></td></tr>`).join('')}</tbody></table></div>`}`;
-      box.querySelectorAll('[data-earnings-code]').forEach(button=>button.addEventListener('click',()=>{location.hash='#page-detail';openPage('detail');evaluateDetailStock(button.dataset.earningsCode);}));
+      box.innerHTML=`<p>${year}年${month}月：JPX掲載分 ${unique.size}銘柄。${esc(data.note||'取得範囲には限りがあります。')}</p>${data.status==='error'?'<p>予定表の取得に失敗しました。</p>':`<div style="overflow:auto"><table><thead><tr><th>予定日</th><th>コード</th><th>銘柄</th></tr></thead><tbody>${[...unique.values()].map(x=>`<tr><td>${x.dates.map(esc).join(' ／ ')}</td><td><a href="https://finance.yahoo.co.jp/quote/${encodeURIComponent(String(x.code))}.T" target="_blank" rel="noopener noreferrer">${esc(x.code)}</a></td><td><a href="#page-detail" data-earnings-code="${esc(x.code)}">${esc(x.name)}</a></td></tr>`).join('')}</tbody></table></div>`}`;
+      box.querySelectorAll('[data-earnings-code]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();location.hash='#page-detail';openPage('detail');evaluateDetailStock(link.dataset.earningsCode);}));
     }catch(error){if(seq===earningsSeq)box.textContent=error.message;}
   }
   const registryKey='stockLearningEverFavoritesV1';let enrollPending=null;
